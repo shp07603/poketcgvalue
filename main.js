@@ -78,10 +78,10 @@ const GENRE_MAP = {
 };
 
 const STATUS_MAP = {
-  short: { perPage: 10, format: ["TV_SHORT", "OVA", "MOVIE"] },
-  medium: { perPage: 10, format: ["TV"] },
-  long: { perPage: 10, format: ["TV"] },
-  ongoing: { perPage: 10, status: "RELEASING" },
+  short: { perPage: 15, format: ["TV_SHORT", "OVA", "MOVIE"] },
+  medium: { perPage: 15, format: ["TV"] },
+  long: { perPage: 15, format: ["TV"] },
+  ongoing: { perPage: 15, status: "RELEASING" },
 };
 
 // ── STATE ──
@@ -91,6 +91,7 @@ const state = {
   answers: {},
   selected: null,
   results: [],
+  visibleCount: 3, // Start with 3
   error: null,
 };
 
@@ -122,6 +123,28 @@ function truncate(str, n) {
   return str && str.length > n ? str.slice(0, n) + "..." : str;
 }
 
+// Find Korean title from synonyms
+function getKoreanTitle(media) {
+  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
+  // Check synonyms first
+  const krSynonym = media.synonyms?.find(s => koreanRegex.test(s));
+  if (krSynonym) return krSynonym;
+  
+  // If native title is Korean (rare on AniList but possible)
+  if (koreanRegex.test(media.title.native)) return media.title.native;
+  
+  return null;
+}
+
+// Fisher-Yates Shuffle
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 // ── RENDER FUNCTIONS ──
 
 function renderIntro() {
@@ -138,20 +161,6 @@ function renderIntro() {
           <span style="color:#a0a0ff;font-weight:600">AniList</span>에서 딱 맞는 애니를 찾아드려요.<br>
           MBTI보다 정확한 애니 궁합 테스트 🌙
         </p>
-        <div class="feature-grid">
-          <div class="feature-item">
-            <div class="feature-icon">🧬</div>
-            <span style="font-size:12px;color:#7777aa">5가지 질문</span>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon">🔗</div>
-            <span style="font-size:12px;color:#7777aa">실시간 DB</span>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon">🎯</div>
-            <span style="font-size:12px;color:#7777aa">9개 추천</span>
-          </div>
-        </div>
         <button class="primary-btn" onclick="startQuiz()">테스트 시작하기 →</button>
       </div>
     </div>
@@ -160,17 +169,18 @@ function renderIntro() {
 
 function renderQuiz() {
   const q = QUESTIONS[state.currentQ];
-  const progress = ((state.currentQ + (state.selected ? 1 : 0)) / QUESTIONS.length) * 100;
+  const progress = ((state.currentQ) / QUESTIONS.length) * 100;
 
+  // We only render this ONCE per question to prevent jitter
   app.innerHTML = `
-    <div class="quiz-container fade-up">
+    <div class="quiz-container fade-up" id="quizContainer">
       <div class="progress-bar-wrap">
         <div class="progress-info">
           <span>질문 ${state.currentQ + 1} / ${QUESTIONS.length}</span>
-          <span>${Math.round(progress)}%</span>
+          <span id="progressText">${Math.round(progress)}%</span>
         </div>
         <div class="progress-track">
-          <div class="progress-fill" style="width: ${progress}%"></div>
+          <div class="progress-fill" id="progressBar" style="width: ${progress}%"></div>
         </div>
       </div>
 
@@ -183,9 +193,8 @@ function renderQuiz() {
 
         <div class="options-grid">
           ${q.options.map(opt => `
-            <button class="option-btn ${state.selected === opt.value ? 'selected' : ''}" 
-              onclick="handleSelect('${opt.value}')">
-              ${state.selected === opt.value ? '<div class="check-mark">✓</div>' : ''}
+            <button class="option-btn" data-value="${opt.value}" onclick="handleSelect('${opt.value}')">
+              <div class="check-mark hidden">✓</div>
               <div style="font-size:18px;font-weight:700;margin-bottom:6px">${opt.label}</div>
               <div style="font-size:13px;color:#7777aa">${opt.desc}</div>
             </button>
@@ -193,7 +202,7 @@ function renderQuiz() {
         </div>
 
         <div style="display:flex;justify-content:center">
-          <button class="primary-btn" onclick="handleNext()" ${!state.selected ? 'disabled' : ''}>
+          <button id="nextBtn" class="primary-btn" onclick="handleNext()" disabled>
             ${state.currentQ < QUESTIONS.length - 1 ? "다음 →" : "결과 보기 ✨"}
           </button>
         </div>
@@ -208,7 +217,7 @@ function renderLoading() {
       <div class="spinner"></div>
       <div style="text-align:center">
         <p style="font-size:20px;font-weight:700;margin-bottom:8px">당신의 애니를 찾는 중...</p>
-        <p style="color:#7777aa;font-size:14px">AniList에서 50만+ 작품 중 분석 중 🔍</p>
+        <p style="color:#7777aa;font-size:14px">취향 분석 중... (1/3)</p>
       </div>
     </div>
   `;
@@ -216,6 +225,7 @@ function renderLoading() {
 
 function renderResults() {
   const tags = buildGenres(state.answers);
+  const visibleItems = state.results.slice(0, state.visibleCount);
   
   app.innerHTML = `
     <div class="results-container fade-up">
@@ -237,13 +247,18 @@ function renderResults() {
         </div>
       ` : ''}
 
-      <div class="anime-grid">
-        ${state.results.map((anime, i) => `
+      <div class="anime-grid" id="animeGrid">
+        ${visibleItems.map((anime, i) => {
+          const krTitle = getKoreanTitle(anime);
+          const titleMain = krTitle || anime.title.english || anime.title.romaji;
+          const titleSub = krTitle ? (anime.title.english || anime.title.romaji) : (anime.title.native || anime.title.romaji);
+
+          return `
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
             <div class="cover-wrap">
               ${anime.bannerImage || anime.coverImage?.large ? `
-                <img class="cover-img" src="${anime.bannerImage || anime.coverImage?.large}" alt="${anime.title?.romaji}">
+                <img class="cover-img" src="${anime.bannerImage || anime.coverImage?.large}" alt="cover">
               ` : `
                 <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0a3a,#0a1a3a);display:flex;align-items:center;justify-content:center;font-size:48px">🎌</div>
               `}
@@ -266,10 +281,8 @@ function renderResults() {
               <div class="title-row">
                 <img class="thumb-img" src="${anime.coverImage?.large}" alt="">
                 <div style="flex:1;min-width:0">
-                  <h3 class="anime-title">${anime.title?.english || anime.title?.romaji}</h3>
-                  ${anime.title?.romaji !== (anime.title?.english) ? `
-                    <p style="font-size:12px;color:#7777aa">${anime.title?.romaji}</p>
-                  ` : ''}
+                  <h3 class="anime-title">${titleMain}</h3>
+                  <p style="font-size:12px;color:#7777aa">${titleSub || ''}</p>
                 </div>
               </div>
 
@@ -284,14 +297,22 @@ function renderResults() {
               </div>
 
               ${anime.description ? `
-                <p class="anime-desc">${truncate(anime.description.replace(/<[^>]*>/g, ""), 120)}</p>
+                <p class="anime-desc">${truncate(anime.description.replace(/<[^>]*>/g, ""), 80)}</p>
               ` : ''}
 
               <div class="cta-box">AniList에서 보기 →</div>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
+
+      ${state.results.length > state.visibleCount ? `
+        <div style="text-align:center;margin-bottom:40px">
+           <button class="primary-btn" onclick="showMore()" style="padding:14px 40px;font-size:14px;background:rgba(120,120,255,0.1)">
+             + 더 보기 (${state.results.length - state.visibleCount})
+           </button>
+        </div>
+      ` : ''}
 
       <div style="text-align:center">
         <button class="restart-btn" onclick="restart()">🔄 다시 테스트하기</button>
@@ -307,9 +328,24 @@ window.startQuiz = () => {
   render();
 };
 
+// Jitter-free selection handler (updates DOM directly)
 window.handleSelect = (val) => {
   state.selected = val;
-  render(); // Re-render to show selection state
+  
+  // Update visually without full re-render
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    if (btn.dataset.value === val) {
+      btn.classList.add('selected');
+      btn.querySelector('.check-mark').classList.remove('hidden');
+    } else {
+      btn.classList.remove('selected');
+      btn.querySelector('.check-mark').classList.add('hidden');
+    }
+  });
+
+  // Enable Next button
+  const nextBtn = document.getElementById('nextBtn');
+  if (nextBtn) nextBtn.disabled = false;
 };
 
 window.handleNext = async () => {
@@ -319,13 +355,17 @@ window.handleNext = async () => {
   state.answers[q.id] = state.selected;
 
   if (state.currentQ < QUESTIONS.length - 1) {
-    // Animate out? Simple transition for now
     state.currentQ++;
     state.selected = null;
-    render();
+    render(); // Render next question
   } else {
     await fetchRecommendations();
   }
+};
+
+window.showMore = () => {
+  state.visibleCount += 3;
+  render(); // Re-render results with more items
 };
 
 window.restart = () => {
@@ -334,6 +374,7 @@ window.restart = () => {
   state.answers = {};
   state.selected = null;
   state.results = [];
+  state.visibleCount = 3;
   state.error = null;
   render();
 };
@@ -344,6 +385,9 @@ async function fetchRecommendations() {
 
   const genres = buildGenres(state.answers);
   const lengthConfig = STATUS_MAP[state.answers.length] || {};
+  
+  // Random page to ensure variety (1 to 3)
+  const randomPage = Math.floor(Math.random() * 3) + 1;
 
   const query = `
     query ($genres: [String], $page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus) {
@@ -354,10 +398,11 @@ async function fetchRecommendations() {
           sort: $sort
           status: $status
           isAdult: false
-          averageScore_greater: 65
+          averageScore_greater: 60
         ) {
           id
           title { romaji english native }
+          synonyms 
           coverImage { large }
           bannerImage
           description(asHtml: false)
@@ -377,8 +422,8 @@ async function fetchRecommendations() {
 
   const variables = {
     genres: genres.length > 0 ? genres : ["Action"],
-    page: 1,
-    perPage: 12,
+    page: randomPage,
+    perPage: 18, // Fetch more to shuffle
     sort: ["SCORE_DESC", "POPULARITY_DESC"],
     ...(lengthConfig.status ? { status: lengthConfig.status } : {}),
   };
@@ -391,7 +436,12 @@ async function fetchRecommendations() {
     });
     const data = await res.json();
     if (data.errors) throw new Error(data.errors[0].message);
-    state.results = data?.data?.Page?.media || [];
+    
+    let rawResults = data?.data?.Page?.media || [];
+    
+    // Shuffle results client-side for "surprise" factor
+    state.results = shuffleArray(rawResults);
+    
     state.phase = "results";
   } catch (e) {
     state.error = "API 오류가 발생했어요: " + e.message;
