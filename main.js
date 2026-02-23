@@ -62,26 +62,35 @@ const QUESTIONS = [
   },
 ];
 
-// Complex Logic Maps
-const MOOD_TAGS = {
+// Define Genres (AniList Genres)
+const GENRES = {
   intense: ["Action", "Thriller", "Psychological"],
-  fun: ["Comedy", "Slice of Life", "Parody"],
+  fun: ["Comedy", "Slice of Life"],
   thoughtful: ["Psychological", "Sci-Fi", "Drama"],
-  emotional: ["Drama", "Romance", "Iyashikei"],
+  emotional: ["Drama", "Romance"],
+  fantasy: ["Fantasy", "Adventure"],
+  scifi: ["Sci-Fi", "Mecha"],
+  real: ["Slice of Life", "Sports"],
+  history: [], // Historical is a tag
+  growth: ["Sports", "Adventure"],
+  love: ["Romance"],
+  mystery: ["Mystery", "Thriller"],
+  drama: ["Drama"],
 };
 
-const WORLD_TAGS = {
-  fantasy: ["Fantasy", "Isekai", "Magic"],
-  scifi: ["Sci-Fi", "Mecha", "Cyberpunk", "Space"],
-  real: ["Slice of Life", "School", "Sports"],
-  history: ["Historical", "Samurai", "War"],
-};
-
-const THEME_TAGS = {
-  growth: ["Shounen", "Sports", "Coming of Age"],
-  love: ["Romance", "Shoujo", "Love Triangle"],
-  mystery: ["Mystery", "Detective", "Suspense"],
-  drama: ["Drama", "Tragedy", "Family Life"],
+// Define Tags (AniList Tags)
+const TAGS = {
+  fun: ["Parody"],
+  thoughtful: ["Philosophy"],
+  emotional: ["Iyashikei"],
+  fantasy: ["Isekai", "Magic"],
+  scifi: ["Cyberpunk", "Space"],
+  real: ["School"],
+  history: ["Historical", "Samurai"],
+  growth: ["Shounen", "Coming of Age"],
+  love: ["Shoujo", "Love Triangle"],
+  mystery: ["Detective"],
+  drama: ["Tragedy"],
 };
 
 const STATUS_MAP = {
@@ -93,7 +102,7 @@ const STATUS_MAP = {
 
 // ── STATE ──
 const state = {
-  phase: "intro", // intro | quiz | loading | results
+  phase: "intro",
   currentQ: 0,
   answers: {},
   selected: null,
@@ -108,7 +117,6 @@ const app = document.getElementById("app");
 
 // ── LOGIC ──
 
-// Generate unique analysis text (High Quality Content)
 function generateAnalysis(ans) {
   const moods = {
     intense: "강렬한 자극과 몰입감을 원하시며,",
@@ -132,16 +140,26 @@ function generateAnalysis(ans) {
   return `${moods[ans.mood]} ${worlds[ans.world]} 펼쳐지는 ${themes[ans.theme]}를 추천해 드립니다. 당신의 취향 DNA를 분석한 결과, 다음 작품들이 가장 높은 매칭률을 보였습니다.`;
 }
 
-function buildGenres(answers) {
-  // Combine all relevant tags based on answers
-  let tags = [];
-  
-  if (answers.mood) tags.push(...MOOD_TAGS[answers.mood]);
-  if (answers.world) tags.push(...WORLD_TAGS[answers.world]);
-  if (answers.theme) tags.push(...THEME_TAGS[answers.theme]);
+function buildCriteria(answers) {
+  let genres = new Set();
+  let tags = new Set();
 
-  // Remove duplicates and pick top 3 unique ones for display
-  return [...new Set(tags)].slice(0, 5); 
+  // Mood
+  if (GENRES[answers.mood]) GENRES[answers.mood].forEach(g => genres.add(g));
+  if (TAGS[answers.mood]) TAGS[answers.mood].forEach(t => tags.add(t));
+
+  // World
+  if (GENRES[answers.world]) GENRES[answers.world].forEach(g => genres.add(g));
+  if (TAGS[answers.world]) TAGS[answers.world].forEach(t => tags.add(t));
+
+  // Theme
+  if (GENRES[answers.theme]) GENRES[answers.theme].forEach(g => genres.add(g));
+  if (TAGS[answers.theme]) TAGS[answers.theme].forEach(t => tags.add(t));
+
+  return {
+    genres: [...genres].slice(0, 3), // Limit genre count
+    tags: [...tags].slice(0, 3) // Limit tag count
+  };
 }
 
 function getKoreanTitle(media) {
@@ -235,14 +253,15 @@ function renderLoading() {
       <div class="spinner"></div>
       <div style="text-align:center">
         <p style="font-size:20px;font-weight:700;margin-bottom:8px">DNA 분석 중...</p>
-        <p style="color:#7777aa;font-size:14px">취향 패턴 매칭 중 (3/3)</p>
+        <p style="color:#7777aa;font-size:14px">AniList DB 검색 중 (50만+ 작품)</p>
       </div>
     </div>
   `;
 }
 
 function renderResults() {
-  const tags = buildGenres(state.answers);
+  const criteria = buildCriteria(state.answers);
+  const displayTags = [...criteria.genres, ...criteria.tags];
   const visibleItems = state.results.slice(0, state.visibleCount);
   
   app.innerHTML = `
@@ -253,19 +272,24 @@ function renderResults() {
           당신의 취향 분석 결과
         </h2>
         
-        <!-- High Quality Text Content -->
         <div style="background:rgba(255,255,255,0.05);padding:24px;border-radius:16px;margin-bottom:32px;border:1px solid rgba(120,120,255,0.2);line-height:1.7;color:#e8e8ff;max-width:800px;margin-left:auto;margin-right:auto">
           <p style="font-size:16px;font-weight:500">${state.analysisText}</p>
         </div>
 
         <div class="tags-wrap">
-          ${tags.map(g => `<span class="tag">#${g}</span>`).join('')}
+          ${displayTags.map(g => `<span class="tag">#${g}</span>`).join('')}
         </div>
       </div>
 
       ${state.error ? `
         <div style="text-align:center;padding:40px;color:#ff8888;background:rgba(255,80,80,0.05);border:1px solid rgba(255,80,80,0.2);border-radius:16px;margin-bottom:32px">
           ${state.error}
+        </div>
+      ` : ''}
+
+      ${state.results.length === 0 && !state.error ? `
+        <div style="text-align:center;padding:40px;color:#aaa;">
+          조건에 맞는 애니메이션을 찾지 못했습니다 😢<br>다시 시도해보세요.
         </div>
       ` : ''}
 
@@ -385,24 +409,28 @@ async function fetchRecommendations() {
   state.phase = "loading";
   render();
 
-  // Generate textual analysis
   state.analysisText = generateAnalysis(state.answers);
 
-  const genres = buildGenres(state.answers);
+  const criteria = buildCriteria(state.answers);
   const lengthConfig = STATUS_MAP[state.answers.length] || {};
   const randomPage = Math.floor(Math.random() * 3) + 1;
 
-  // GraphQL: Use genre_in for broader matching based on our refined tags
+  // IMPORTANT: Split genre_in and tag_in for correct API usage
+  // If no genres/tags found, fallback to 'Action' to avoid empty results
+  const genres = criteria.genres.length > 0 ? criteria.genres : null;
+  const tags = criteria.tags.length > 0 ? criteria.tags : null;
+
   const query = `
-    query ($genres: [String], $page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus) {
+    query ($genres: [String], $tags: [String], $page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus) {
       Page(page: $page, perPage: $perPage) {
         media(
           type: ANIME
           genre_in: $genres
+          tag_in: $tags
           sort: $sort
           status: $status
           isAdult: false
-          averageScore_greater: 65
+          averageScore_greater: 60
         ) {
           id
           title { romaji english native }
@@ -424,12 +452,16 @@ async function fetchRecommendations() {
   `;
 
   const variables = {
-    genres: genres.length > 0 ? genres : ["Action"],
     page: randomPage,
-    perPage: 24, // Fetch enough to shuffle
+    perPage: 24,
     sort: ["SCORE_DESC", "POPULARITY_DESC"],
+    ...(genres ? { genres } : {}),
+    ...(tags ? { tags } : {}),
     ...(lengthConfig.status ? { status: lengthConfig.status } : {}),
   };
+  
+  // Debug log
+  console.log("Fetching AniList:", variables);
 
   try {
     const res = await fetch("https://graphql.anilist.co", {
@@ -437,10 +469,31 @@ async function fetchRecommendations() {
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ query, variables }),
     });
+    
     const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
+    if (data.errors) {
+      console.error("AniList Error:", data.errors);
+      throw new Error(data.errors[0].message);
+    }
     
     let rawResults = data?.data?.Page?.media || [];
+    console.log("Results found:", rawResults.length);
+
+    if (rawResults.length === 0 && genres && tags) {
+        // Retry logic: If too strict (genre + tag), try only genre
+        console.log("No results, retrying with only genres...");
+        const retryVars = { ...variables };
+        delete retryVars.tags;
+        
+        const retryRes = await fetch("https://graphql.anilist.co", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ query, variables: retryVars }),
+        });
+        const retryData = await retryRes.json();
+        rawResults = retryData?.data?.Page?.media || [];
+    }
+
     state.results = shuffleArray(rawResults);
     state.phase = "results";
   } catch (e) {
@@ -448,13 +501,6 @@ async function fetchRecommendations() {
     state.phase = "results";
   }
   render();
-}
-
-function render() {
-  if (state.phase === "intro") renderIntro();
-  else if (state.phase === "quiz") renderQuiz();
-  else if (state.phase === "loading") renderLoading();
-  else if (state.phase === "results") renderResults();
 }
 
 render();
