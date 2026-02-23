@@ -1,14 +1,857 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포켓몬 카드 시세 퀴즈</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital @0;1&family=DM+Mono:wght @400;500&family=Noto+Sans+KR:wght @300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0a08;
+  --surface: #15120e;
+  --surface2: #1e1a14;
+  --border: #2e2820;
+  --gold: #d4a843;
+  --gold-light: #f0c96a;
+  --gold-dim: #7a5f20;
+  --white: #f5ede0;
+  --muted: #6b5f4a;
+  --green: #4caf77;
+  --red: #e05252;
+  --glow-gold: 0 0 40px rgba(212,168,67,0.25);
+  --glow-gold-sm: 0 0 12px rgba(212,168,67,0.2);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* marble texture bg */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(212,168,67,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(212,168,67,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.01) 0%, transparent 100%);
+  pointer-events:none; z-index:0;
+}
+
+.page { position:relative; z-index:1; max-width:700px; margin:0 auto; padding:0 20px 80px; }
+
+/* ── Header ── */
+.top-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:24px 0 20px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:36px;
+}
+.top-logo {
+  font-family:'DM Serif Display', serif;
+  font-size:20px; color:var(--gold);
+  letter-spacing:1px;
+}
+.top-logo span { font-style:italic; }
+.top-stats {
+  display:flex; gap:24px; align-items:center;
+}
+.stat-chip {
+  font-family:'DM Mono', monospace;
+  font-size:12px; color:var(--muted);
+  display:flex; align-items:center; gap:6px;
+}
+.stat-chip strong { color:var(--white); font-size:15px; }
+
+/* ── Screen system ── */
+.screen { display:none; animation:fadeUp .4s ease; }
+.screen.active { display:block; }
+ @keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+/* ── Start screen ── */
+.start-hero { text-align:center; padding:60px 0 48px; }
+.start-eyebrow {
+  font-family:'DM Mono', monospace;
+  font-size:11px; letter-spacing:4px;
+  color:var(--gold-dim); text-transform:uppercase;
+  margin-bottom:20px;
+}
+.start-title {
+  font-family:'DM Serif Display', serif;
+  font-size:clamp(40px,8vw,68px);
+  line-height:1.05; color:var(--white);
+  margin-bottom:8px;
+}
+.start-title em { color:var(--gold); font-style:italic; }
+.start-subtitle {
+  font-size:16px; color:var(--muted);
+  font-weight:300; line-height:1.7;
+  max-width:480px; margin:0 auto 40px;
+}
+
+.how-it-works {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:16px; margin-bottom:40px;
+  text-align:left;
+}
+.how-card {
+  background:var(--surface); border:1px solid var(--border);
+  padding:20px 16px; border-radius:12px;
+}
+.how-num {
+  font-family:'DM Mono', monospace;
+  font-size:11px; color:var(--gold-dim);
+  margin-bottom:8px;
+}
+.how-title { font-size:13px; font-weight:600; color:var(--white); margin-bottom:6px; }
+.how-desc { font-size:12px; color:var(--muted); line-height:1.6; }
+
+.range-select {
+  margin-bottom:32px;
+  background:var(--surface); border:1px solid var(--border);
+  padding:20px 24px; border-radius:12px;
+}
+.range-label {
+  font-size:12px; color:var(--muted); margin-bottom:14px;
+  font-family:'DM Mono', monospace; letter-spacing:1px;
+}
+.range-btns { display:flex; gap:8px; }
+.range-btn {
+  flex:1; padding:12px 8px;
+  background:transparent; border:1.5px solid var(--border);
+  color:var(--muted); font-family:'Noto Sans KR', sans-serif;
+  font-size:12px; cursor:pointer; border-radius:8px;
+  transition:all .2s; line-height:1.6; text-align:center;
+}
+.range-btn:hover { border-color:var(--gold-dim); color:var(--white); }
+.range-btn.selected { border-color:var(--gold); color:var(--gold); background:rgba(212,168,67,0.08); }
+
+.start-btn {
+  width:100%; padding:18px;
+  background:var(--gold); border:none; border-radius:12px;
+  font-family:'DM Serif Display', serif;
+  font-size:20px; letter-spacing:2px; color:var(--bg);
+  cursor:pointer; transition:all .25s;
+  box-shadow:var(--glow-gold);
+  position:relative; overflow:hidden;
+}
+.start-btn::before {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+  transform:translateX(-100%);
+  animation:shimmer 2.5s infinite;
+}
+ @keyframes shimmer { to { transform:translateX(100%); } }
+.start-btn:hover { background:var(--gold-light); transform:translateY(-2px); box-shadow:0 8px 32px rgba(212,168,67,0.4); }
+
+/* ── Game screen ── */
+.round-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:28px;
+}
+.round-tag {
+  font-family:'DM Mono', monospace;
+  font-size:11px; color:var(--muted);
+  letter-spacing:2px; text-transform:uppercase;
+}
+.progress-dots {
+  display:flex; gap:6px;
+}
+.dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--border); transition:all .3s;
+}
+.dot.done { background:var(--gold); }
+.dot.current { background:var(--gold); box-shadow:0 0 8px var(--gold); animation:dotPulse 1s ease-in-out infinite; }
+ @keyframes dotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+
+/* Card stage */
+.card-stage {
+  display:flex; flex-direction:column; align-items:center;
+  margin-bottom:32px;
+}
+.card-frame {
+  position:relative; width:260px;
+  margin-bottom:20px;
+}
+.card-img {
+  width:100%; border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+  transition:transform .3s;
+  display:block;
+}
+.card-frame:hover .card-img { transform:translateY(-4px) rotate(1deg); }
+
+/* Holo shimmer on card */
+.card-holo {
+  position:absolute; inset:0; border-radius:14px;
+  background:linear-gradient(135deg, rgba(255,215,0,0) 0%, rgba(255,215,0,0.08) 50%, rgba(255,215,0,0) 100%);
+  pointer-events:none;
+  animation:holoMove 4s ease-in-out infinite alternate;
+}
+ @keyframes holoMove {
+  0% { background:linear-gradient(135deg, rgba(100,180,255,0.06) 0%, transparent 60%); }
+  50% { background:linear-gradient(225deg, rgba(255,150,200,0.06) 0%, transparent 60%); }
+  100% { background:linear-gradient(315deg, rgba(255,215,0,0.08) 0%, transparent 60%); }
+}
+
+.card-meta {
+  text-align:center;
+}
+.card-name {
+  font-family:'DM Serif Display', serif;
+  font-size:22px; color:var(--white); margin-bottom:6px;
+}
+.card-detail {
+  font-size:12px; color:var(--muted);
+  font-family:'DM Mono', monospace;
+  display:flex; justify-content:center; gap:16px;
+}
+.card-detail span {
+  background:var(--surface); padding:4px 10px; border-radius:100px;
+  border:1px solid var(--border);
+}
+
+/* Price input section */
+.price-section {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:28px 24px;
+  margin-bottom:20px;
+}
+.price-question {
+  font-size:13px; color:var(--muted);
+  margin-bottom:20px; text-align:center;
+  font-family:'DM Mono', monospace; letter-spacing:1px;
+}
+
+/* Slider */
+.slider-wrap { margin-bottom:24px; }
+.slider-labels {
+  display:flex; justify-content:space-between;
+  font-family:'DM Mono', monospace; font-size:11px;
+  color:var(--muted); margin-bottom:10px;
+}
+input[type=range] {
+  width:100%; -webkit-appearance:none;
+  height:6px; border-radius:100px;
+  background:var(--border); outline:none;
+  cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--gold); cursor:pointer;
+  box-shadow:0 0 12px rgba(212,168,67,0.5);
+  transition:transform .1s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); }
+
+.price-display {
+  text-align:center; margin-bottom:20px;
+}
+.price-display .amount {
+  font-family:'DM Serif Display', serif;
+  font-size:48px; color:var(--gold);
+  text-shadow:var(--glow-gold-sm);
+  line-height:1;
+  display:block; margin-bottom:4px;
+}
+.price-display .range-hint {
+  font-size:12px; color:var(--muted);
+  font-family:'DM Mono', monospace;
+}
+
+.submit-btn {
+  width:100%; padding:16px;
+  background:transparent; border:2px solid var(--gold);
+  border-radius:10px; color:var(--gold);
+  font-family:'DM Serif Display', serif;
+  font-size:18px; letter-spacing:1px;
+  cursor:pointer; transition:all .2s;
+  position:relative; overflow:hidden;
+}
+.submit-btn::before {
+  content:''; position:absolute; inset:0;
+  background:var(--gold); transform:scaleY(0);
+  transform-origin:bottom; transition:transform .25s;
+  z-index:0;
+}
+.submit-btn span { position:relative; z-index:1; transition:color .25s; }
+.submit-btn:hover::before { transform:scaleY(1); }
+.submit-btn:hover span { color:var(--bg); }
+.submit-btn:disabled { opacity:.3; cursor:not-allowed; }
+.submit-btn:disabled::before { transform:none !important; }
+.submit-btn:disabled:hover span { color:var(--gold); }
+
+/* ── Result reveal ── */
+.result-reveal {
+  display:none;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:16px; padding:28px 24px;
+  margin-bottom:20px; text-align:center;
+  animation:fadeUp .4s ease;
+}
+.result-reveal.show { display:block; }
+
+.result-label {
+  font-family:'DM Mono', monospace;
+  font-size:11px; color:var(--muted);
+  letter-spacing:3px; text-transform:uppercase;
+  margin-bottom:12px;
+}
+.result-actual {
+  font-family:'DM Serif Display', serif;
+  font-size:52px; color:var(--white);
+  margin-bottom:16px; display:block;
+}
+.result-diff-bar-wrap {
+  height:8px; background:var(--border);
+  border-radius:100px; overflow:hidden;
+  margin-bottom:12px; position:relative;
+}
+.result-diff-bar {
+  height:100%; border-radius:100px;
+  transition:width 1s cubic-bezier(.34,1.1,.64,1);
+  width:0%;
+}
+.result-diff-bar.perfect { background:var(--gold); box-shadow:0 0 10px var(--gold); }
+.result-diff-bar.close { background:var(--green); box-shadow:0 0 8px var(--green); }
+.result-diff-bar.off { background:var(--red); }
+
+.result-score-msg {
+  font-size:20px; font-weight:600; margin-bottom:8px;
+}
+.result-score-msg.perfect { color:var(--gold); }
+.result-score-msg.close { color:var(--green); }
+.result-score-msg.off { color:var(--red); }
+
+.result-pts {
+  font-family:'DM Mono', monospace;
+  font-size:13px; color:var(--muted);
+  margin-bottom:16px;
+}
+.result-pts strong { color:var(--white); font-size:18px; }
+
+.result-guess-line {
+  font-size:13px; color:var(--muted);
+  font-family:'DM Mono', monospace;
+}
+
+.next-btn {
+  width:100%; padding:16px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; color:var(--white);
+  font-family:'Noto Sans KR', sans-serif;
+  font-size:15px; font-weight:600;
+  cursor:pointer; transition:all .2s;
+}
+.next-btn:hover { border-color:var(--gold-dim); background:var(--surface2); }
+
+/* Loading skeleton */
+.skeleton {
+  background:linear-gradient(90deg, var(--surface) 0%, var(--surface2) 50%, var(--surface) 100%);
+  background-size:200% 100%;
+  animation:skelAnim 1.4s infinite;
+  border-radius:10px;
+}
+ @keyframes skelAnim { to { background-position:-200% 0; } }
+
+/* ── End screen ── */
+.end-wrap { text-align:center; padding:40px 0; }
+.end-eyebrow {
+  font-family:'DM Mono', monospace;
+  font-size:11px; letter-spacing:4px; color:var(--gold-dim);
+  margin-bottom:16px; text-transform:uppercase;
+}
+.end-score-big {
+  font-family:'DM Serif Display', serif;
+  font-size:clamp(60px,15vw,100px);
+  color:var(--gold); text-shadow:var(--glow-gold);
+  line-height:1; display:block; margin-bottom:8px;
+}
+.end-grade {
+  font-size:18px; color:var(--muted);
+  margin-bottom:36px; font-weight:300;
+}
+
+.end-cards-recap {
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:8px; margin-bottom:36px;
+}
+.recap-card {
+  border-radius:8px; overflow:hidden; position:relative;
+}
+.recap-card img { width:100%; display:block; border-radius:8px; }
+.recap-card .recap-pts {
+  position:absolute; bottom:0; left:0; right:0;
+  text-align:center; font-size:9px;
+  font-family:'DM Mono', monospace; font-weight:500;
+  padding:3px 4px;
+  background:rgba(0,0,0,0.7);
+}
+.recap-pts.p { color:var(--gold); }
+.recap-pts.c { color:var(--green); }
+.recap-pts.o { color:var(--red); }
+
+.end-stats {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:12px; margin-bottom:32px;
+}
+.end-stat {
+  background:var(--surface); border:1px solid var(--border);
+  padding:16px; border-radius:10px;
+}
+.end-stat-val {
+  font-family:'DM Serif Display', serif;
+  font-size:28px; display:block;
+  color:var(--white); margin-bottom:4px;
+}
+.end-stat-label { font-size:11px; color:var(--muted); }
+
+.end-btns { display:flex; gap:10px; }
+.btn-gold {
+  flex:1; padding:16px;
+  background:var(--gold); border:none; border-radius:10px;
+  font-family:'DM Serif Display', serif; font-size:18px;
+  color:var(--bg); cursor:pointer; transition:all .2s;
+}
+.btn-gold:hover { background:var(--gold-light); transform:translateY(-2px); }
+.btn-outline {
+  flex:1; padding:16px;
+  background:transparent; border:1.5px solid var(--border);
+  border-radius:10px; color:var(--muted);
+  font-family:'Noto Sans KR', sans-serif; font-size:14px;
+  cursor:pointer; transition:all .2s;
+}
+.btn-outline:hover { border-color:var(--gold-dim); color:var(--white); }
+
+/* Loading spinner */
+.spin { animation:spin 1s linear infinite; display:inline-block; }
+ @keyframes spin { to { transform:rotate(360deg); } }
+
+ @media(max-width:480px) {
+  .how-it-works { grid-template-columns:1fr; }
+  .end-cards-recap { grid-template-columns:repeat(5,1fr); gap:4px; }
+  .end-stats { grid-template-columns:repeat(3,1fr); }
+  .card-frame { width:200px; }
+  .range-btns { flex-direction:column; }
+}
+</style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+<div class="page">
+
+  <div class="top-bar">
+    <div class="top-logo">Card<span>Price</span> Quiz</div>
+    <div class="top-stats">
+      <div class="stat-chip">점수 <strong id="scoreDisplay">0</strong></div>
+      <div class="stat-chip" id="roundDisplay" style="display:none">라운드 <strong id="roundNum">1</strong>/10</div>
+    </div>
+  </div>
+
+  <!-- ── START ── -->
+  <div class="screen active" id="screenStart">
+    <div class="start-hero">
+      <div class="start-eyebrow">Pokemon TCG Price Quiz</div>
+      <div class="start-title">이 카드<br><em>얼마일까요?</em></div>
+      <p class="start-subtitle">실제 TCGPlayer 시세 데이터로 카드 가격을 맞춰보세요. 가까울수록 고점수!</p>
+    </div>
+
+    <div class="how-it-works">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <div class="how-title">카드 공개</div>
+        <div class="how-desc">실제 포켓몬 TCG 카드가 보여집니다</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <div class="how-title">가격 추측</div>
+        <div class="how-desc">슬라이더로 예상 시세를 맞춰보세요</div>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <div class="how-title">점수 획득</div>
+        <div class="how-desc">정확할수록 최대 1000점 획득!</div>
+      </div>
+    </div>
+
+    <div class="range-select">
+      <div class="range-label">카드 가격대 선택</div>
+      <div class="range-btns">
+        <button class="range-btn selected" onclick="setRange(0,this)">전체 가격대<br><span style="font-size:10px;color:inherit">$0 ~ $500+</span></button>
+        <button class="range-btn" onclick="setRange(1,this)">저가 위주<br><span style="font-size:10px;color:inherit">$0 ~ $20</span></button>
+        <button class="range-btn" onclick="setRange(2,this)">고가 위주<br><span style="font-size:10px;color:inherit">$10 ~ $500+</span></button>
+      </div>
+    </div>
+
+    <button class="start-btn" onclick="startGame()">경매 시작하기</button>
+  </div>
+
+  <!-- ── GAME ── -->
+  <div class="screen" id="screenGame">
+    <div class="round-header">
+      <div class="round-tag">라운드 <span id="roundLabel">1</span> / 10</div>
+      <div class="progress-dots" id="progressDots"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card-stage" id="cardStage">
+      <div class="card-frame" id="cardFrame">
+        <div class="skeleton" style="width:260px;height:363px;border-radius:14px;" id="cardSkeleton"></div>
+        <img class="card-img" id="cardImg" src="" alt="" style="display:none">
+        <div class="card-holo" id="cardHolo" style="display:none"></div>
+      </div>
+      <div class="card-meta">
+        <div class="card-name" id="cardName">불러오는 중...</div>
+        <div class="card-detail" id="cardDetail"></div>
+      </div>
+    </div>
+
+    <!-- Price section -->
+    <div class="price-section" id="priceSection">
+      <div class="price-question">이 카드의 시세는 얼마일까요?</div>
+
+      <div class="price-display">
+        <span class="amount" id="priceAmount">$1.00</span>
+        <div class="range-hint" id="rangeHint">← 슬라이더를 움직여보세요</div>
+      </div>
+
+      <div class="slider-wrap">
+        <div class="slider-labels">
+          <span id="sliderMin">$0.01</span>
+          <span id="sliderMax">$200</span>
+        </div>
+        <input type="range" id="priceSlider" min="1" max="20000" value="100" oninput="updateSlider()">
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitAnswer()"><span>이 가격으로 확정 ✦</span></button>
+    </div>
+
+    <!-- Result -->
+    <div class="result-reveal" id="resultReveal">
+      <div class="result-label">실제 시세</div>
+      <span class="result-actual" id="resultActual"></span>
+      <div class="result-diff-bar-wrap">
+        <div class="result-diff-bar" id="resultDiffBar"></div>
+      </div>
+      <div class="result-score-msg" id="resultMsg"></div>
+      <div class="result-pts" id="resultPts"></div>
+      <div class="result-guess-line" id="resultGuess"></div>
+    </div>
+
+    <button class="next-btn" id="nextBtn" onclick="nextRound()" style="display:none">
+      다음 카드 →
+    </button>
+  </div>
+
+  <!-- ── END ── -->
+  <div class="screen" id="screenEnd">
+    <div class="end-wrap">
+      <div class="end-eyebrow">Game Over</div>
+      <span class="end-score-big" id="endScore"></span>
+      <div class="end-grade" id="endGrade"></div>
+
+      <div class="end-cards-recap" id="endRecap"></div>
+
+      <div class="end-stats">
+        <div class="end-stat">
+          <span class="end-stat-val" id="statPerfect">0</span>
+          <div class="end-stat-label">정확한 답</div>
+        </div>
+        <div class="end-stat">
+          <span class="end-stat-val" id="statClose">0</span>
+          <div class="end-stat-label">근접한 답</div>
+        </div>
+        <div class="end-stat">
+          <span class="end-stat-val" id="statAvgErr">-</span>
+          <div class="end-stat-label">평균 오차율</div>
+        </div>
+      </div>
+
+      <div class="end-btns">
+        <button class="btn-gold" onclick="startGame()">다시 하기</button>
+        <button class="btn-outline" onclick="goStart()">타이틀로</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_KEY = '114e6668-ccb4-4853-acc1-7046f93a6e04';
+const BASE = 'https://api.pokemontcg.io/v2';
+const H = { 'X-Api-Key': API_KEY };
+
+// ── State
+let score = 0, round = 0;
+let currentCard = null, currentPrice = 0;
+let history = [];
+let priceRange = 0; // 0=all, 1=low, 2=high
+let sliderVal = 100; // cents
+
+// ── Price range config
+const RANGES = [
+  { min: 0.10, max: 500, sliderMax: 50000, label: '$0.10 ~ $500+' },
+  { min: 0.10, max: 20,  sliderMax: 2000,  label: '$0.10 ~ $20' },
+  { min: 5,   max: 500, sliderMax: 50000, label: '$5 ~ $500+' },
+];
+
+function setRange(r, btn) {
+  priceRange = r;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function goStart() {
+  showScreen('screenStart');
+  document.getElementById('roundDisplay').style.display = 'none';
+}
+
+// ── Fetch interesting cards (with real prices)
+const POPULAR_SETS = ['sv3pt5','sv8','sv7','sv6','sv4','swsh12pt5','swsh9','sm12','xy12','base1','swsh4','sv1'];
+
+async function fetchCards() {
+  const setId = POPULAR_SETS[Math.floor(Math.random() * POPULAR_SETS.length)];
+  const page = Math.floor(Math.random() * 4) + 1;
+  const r = await fetch(`${BASE}/cards?q=set.id:${setId}&pageSize=60&page=${page}`, { headers: H });
+  if (!r.ok) throw new Error('API 오류');
+  const data = await r.json();
+  return data.data || [];
+}
+
+function getCardPrice(card) {
+  const p = card.tcgplayer?.prices;
+  if (!p) return null;
+  return p.holofoil?.market
+    || p.normal?.market
+    || p['1stEditionHolofoil']?.market
+    || p.reverseHolofoil?.market
+    || p.unlimited?.market
+    || null;
+}
+
+async function getNextCard() {
+  // Try up to 5 batches to find a card with price in range
+  const range = RANGES[priceRange];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const cards = await fetchCards();
+    const withPrice = cards.filter(c => {
+      const price = getCardPrice(c);
+      return price && price >= range.min && price <= range.max * 2;
+    });
+    if (withPrice.length > 0) {
+      return withPrice[Math.floor(Math.random() * withPrice.length)];
+    }
+  }
+  throw new Error('가격 데이터가 있는 카드를 찾지 못했어요');
+}
+
+// ── Slider
+function sliderToDollars(val) {
+  // logarithmic scale for better UX
+  const range = RANGES[priceRange];
+  const maxCents = range.sliderMax;
+  // log scale: 1 to maxCents
+  const log = Math.log(maxCents) / 10000 * val;
+  const cents = Math.round(Math.exp(log));
+  return Math.max(1, Math.min(cents, maxCents)) / 100;
+}
+
+function updateSlider() {
+  sliderVal = parseInt(document.getElementById('priceSlider').value);
+  const dollars = sliderToDollars(sliderVal);
+  document.getElementById('priceAmount').textContent = '$' + dollars.toFixed(2);
+}
+
+// ── Game flow
+async function startGame() {
+  score = 0; round = 0; history = [];
+  document.getElementById('scoreDisplay').textContent = '0';
+  document.getElementById('roundDisplay').style.display = 'flex';
+
+  // Build progress dots
+  const dots = document.getElementById('progressDots');
+  dots.innerHTML = Array(10).fill(0).map((_,i) =>
+    `<div class="dot" id="dot${i}"></div>`
+  ).join('');
+
+  // Set slider range
+  const range = RANGES[priceRange];
+  document.getElementById('sliderMax').textContent = '$' + range.max;
+  document.getElementById('priceSlider').max = 10000;
+
+  showScreen('screenGame');
+  await loadRound();
+}
+
+async function loadRound() {
+  round++;
+  document.getElementById('roundLabel').textContent = round;
+  document.getElementById('roundNum').textContent = round;
+
+  // Update dots
+  for (let i = 0; i < 10; i++) {
+    const d = document.getElementById('dot' + i);
+    if (!d) continue;
+    if (i < round - 1) d.className = 'dot done';
+    else if (i === round - 1) d.className = 'dot current';
+    else d.className = 'dot';
+  }
+
+  // Reset UI
+  document.getElementById('resultReveal').className = 'result-reveal';
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('cardImg').style.display = 'none';
+  document.getElementById('cardHolo').style.display = 'none';
+  document.getElementById('cardSkeleton').style.display = 'block';
+  document.getElementById('cardName').textContent = '카드 불러오는 중 ⋯';
+  document.getElementById('cardDetail').innerHTML = '';
+  document.getElementById('priceSlider').value = 5000;
+  document.getElementById('priceAmount').textContent = '$—';
+  updateSlider();
+
+  try {
+    currentCard = await getNextCard();
+    currentPrice = getCardPrice(currentCard);
+
+    // Show card
+    const img = document.getElementById('cardImg');
+    img.onload = () => {
+      document.getElementById('cardSkeleton').style.display = 'none';
+      img.style.display = 'block';
+      document.getElementById('cardHolo').style.display = 'block';
+    };
+    img.onerror = () => {
+      document.getElementById('cardSkeleton').style.display = 'none';
+      img.style.display = 'block';
+    };
+    img.src = currentCard.images?.large || currentCard.images?.small || '';
+
+    document.getElementById('cardName').textContent = currentCard.name;
+    document.getElementById('cardDetail').innerHTML = [
+      currentCard.set?.name,
+      currentCard.rarity,
+      currentCard.number ? `#${currentCard.number}` : null,
+    ].filter(Boolean).map(t => `<span>${t}</span>`).join('');
+
+  } catch(e) {
+    document.getElementById('cardSkeleton').style.display = 'none';
+    document.getElementById('cardName').textContent = '오류: ' + e.message;
+    document.getElementById('submitBtn').disabled = true;
+  }
+}
+
+function submitAnswer() {
+  if (!currentCard || !currentPrice) return;
+
+  const guessed = sliderToDollars(sliderVal);
+  document.getElementById('submitBtn').disabled = true;
+
+  // Calculate score
+  const diff = Math.abs(guessed - currentPrice) / currentPrice;
+  let pts = 0, cls = 'off', msg = '';
+
+  if (diff <= 0.05) {
+    pts = 1000; cls = 'perfect'; msg = '🏆 완벽한 감각!';
+  } else if (diff <= 0.15) {
+    pts = 800; cls = 'perfect'; msg = '✨ 거의 정확해요!';
+  } else if (diff <= 0.30) {
+    pts = 600; cls = 'close'; msg = '👍 꽤 가깝네요!';
+  } else if (diff <= 0.50) {
+    pts = 400; cls = 'close'; msg = '🙂 그럭저럭';
+  } else if (diff <= 0.80) {
+    pts = 200; cls = 'off'; msg = '😅 조금 빗나갔어요';
+  } else {
+    pts = 50; cls = 'off'; msg = '❌ 많이 빗나갔어요';
+  }
+
+  score += pts;
+  document.getElementById('scoreDisplay').textContent = score.toLocaleString();
+
+  history.push({
+    card: currentCard,
+    price: currentPrice,
+    guess: guessed,
+    pts,
+    cls,
+  });
+
+  // Show result
+  const reveal = document.getElementById('resultReveal');
+  document.getElementById('resultActual').textContent = '$' + currentPrice.toFixed(2);
+  document.getElementById('resultMsg').textContent = msg;
+  document.getElementById('resultMsg').className = 'result-score-msg ' + cls;
+  document.getElementById('resultPts').innerHTML = `이번 획득 점수: <strong>+${pts.toLocaleString()}점</strong>`;
+  document.getElementById('resultGuess').textContent = `내 추측: $${guessed.toFixed(2)} / 오차: ${Math.round(diff*100)}%`;
+  reveal.className = 'result-reveal show';
+
+  // Animate bar
+  const accuracy = Math.max(0, Math.min(1 - diff, 1));
+  setTimeout(() => {
+    const bar = document.getElementById('resultDiffBar');
+    bar.style.width = (accuracy * 100) + '%';
+    bar.className = 'result-diff-bar ' + cls;
+  }, 100);
+
+  document.getElementById('nextBtn').style.display = 'block';
+  document.getElementById('nextBtn').textContent = round >= 10 ? '결과 보기 →' : '다음 카드 →';
+}
+
+async function nextRound() {
+  if (round >= 10) {
+    endGame();
+    return;
+  }
+  await loadRound();
+}
+
+function endGame() {
+  showScreen('screenEnd');
+  document.getElementById('roundDisplay').style.display = 'none';
+  document.getElementById('endScore').textContent = score.toLocaleString() + '점';
+
+  const max = 10000;
+  const pct = score / max;
+  let grade = '';
+  if (pct >= 0.9) grade = '🏆 포켓몬 카드 전문 딜러 수준!';
+  else if (pct >= 0.7) grade = '✨ 카드 시세를 꿰뚫고 있네요!';
+  else if (pct >= 0.5) grade = '👍 꽤 괜찮은 감각이에요';
+  else if (pct >= 0.3) grade = '🙂 연습하면 더 잘할 수 있어요';
+  else grade = '😅 카드 시세 공부가 필요해요!';
+  document.getElementById('endGrade').textContent = grade;
+
+  // Recap cards
+  document.getElementById('endRecap').innerHTML = history.map(h => `
+    <div class="recap-card">
+      <img src="${h.card.images?.small || ''}" alt="${h.card.name}">
+      <div class="recap-pts ${h.cls[0]}">+${h.pts}</div>
+    </div>
+  `).join('');
+
+  const perfect = history.filter(h => h.pts >= 800).length;
+  const close = history.filter(h => h.pts >= 400 && h.pts < 800).length;
+  const avgErr = history.length
+    ? Math.round(history.reduce((s,h) => s + Math.abs(h.guess-h.price)/h.price*100, 0) / history.length)
+    : 0;
+  document.getElementById('statPerfect').textContent = perfect + '개';
+  document.getElementById('statClose').textContent = close + '개';
+  document.getElementById('statAvgErr').textContent = avgErr + '%';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
 </body>
 </html>
