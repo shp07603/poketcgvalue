@@ -48,33 +48,11 @@ const QUESTIONS = [
       { label: "🎲 예측 불가능하면 최고", value: "random", desc: "반전 또 반전" },
     ],
   },
-  {
-    id: "length",
-    emoji: "📺",
-    question: "얼마나 깊이 빠져들 준비가 됐나요?",
-    subtitle: "선호하는 애니 분량",
-    options: [
-      { label: "💫 한 호흡에 끝내고 싶어 (1~12화)", value: "short", desc: "집중해서 완주!" },
-      { label: "📖 딱 적당한 분량 (13~26화)", value: "medium", desc: "하루이틀이면 정주행" },
-      { label: "🌌 세계에 완전히 빠지고 싶어 (26화+)", value: "long", desc: "긴 여정의 감동" },
-      { label: "🔄 지금도 방영 중인 것도 괜찮아", value: "ongoing", desc: "매주 설레는 업데이트" },
-    ],
-  },
-];
-
-// Fallback Data (In case API fails)
-const BACKUP_ANIME = [
-  { id: 1, title: { romaji: "Cowboy Bebop", english: "Cowboy Bebop", native: "カウボーイビバップ" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png" }, averageScore: 86, genres: ["Action", "Sci-Fi"], description: "2071년, 우주 현상금 사냥꾼들의 이야기." },
-  { id: 5114, title: { romaji: "Fullmetal Alchemist: Brotherhood", english: "Fullmetal Alchemist: Brotherhood", native: "鋼の錬金術師 FULLMETAL ALCHEMIST" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5114-KKo3D7XNce7V.jpg" }, averageScore: 90, genres: ["Action", "Adventure"], description: "연금술사 형제의 잃어버린 몸을 찾기 위한 여정." },
-  { id: 30276, title: { romaji: "One Punch Man", english: "One Punch Man", native: "ワンパンマン" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx30276-802ba7J827i3.jpg" }, averageScore: 83, genres: ["Action", "Comedy"], description: "모든 적을 한 방에 끝내는 히어로 사이타마." },
-  { id: 16498, title: { romaji: "Shingeki no Kyojin", english: "Attack on Titan", native: "進撃の巨人" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-m5ZMNtFioc7j.jpg" }, averageScore: 85, genres: ["Action", "Drama"], description: "식인 거인에 맞선 인류의 최후의 항전." },
-  { id: 21519, title: { romaji: "Kimi no Na wa.", english: "Your Name.", native: "君の名は。" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21519-IVCd8XTSX28d.jpg" }, averageScore: 89, genres: ["Romance", "Supernatural"], description: "꿈속에서 몸이 뒤바뀐 도시 소년과 시골 소녀." },
-  { id: 9253, title: { romaji: "Steins;Gate", english: "Steins;Gate", native: "シュタインズ・ゲート" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9253-7pdcVzQskqx5.jpg" }, averageScore: 90, genres: ["Sci-Fi", "Thriller"], description: "우연히 과거로 메일을 보내는 타임머신을 발명하게 된 이야기." },
 ];
 
 // ── STATE ──
 const state = {
-  phase: "intro",
+  phase: "intro", // intro | quiz | loading | results
   currentQ: 0,
   answers: {},
   selected: null,
@@ -82,26 +60,25 @@ const state = {
   visibleCount: 3,
   error: null,
   analysisText: "",
-  loadingMessage: "DNA 분석 중..."
 };
 
-// ── DOM ELEMENTS ──
 const app = document.getElementById("app");
 
 // ── LOGIC ──
 
 function generateAnalysis(ans) {
-  const moods = { Action: "짜릿한 액션", Comedy: "유쾌한 웃음", Drama: "깊은 여운", Romance: "설레는 로맨스" };
-  const worlds = { Fantasy: "판타지 세계", SciFi: "SF 세계관", SliceofLife: "일상의 이야기", Supernatural: "신비로운 세계" };
-  
-  return `${worlds[ans.world] || ans.world} 속에서 펼쳐지는 ${moods[ans.mood] || ans.mood} 애니메이션을 추천합니다.`;
+  const moods = { Action: "강렬한 에너지", Comedy: "즐거운 웃음", Drama: "깊은 몰입감", Romance: "설레는 감정" };
+  const worlds = { Fantasy: "환상적인 세계", "Sci-Fi": "미래지향적 풍경", "Slice of Life": "소소한 일상", Supernatural: "신비로운 분위기" };
+  return `${worlds[ans.world] || "매력적인 세계"}에서 펼쳐지는 ${moods[ans.mood] || "특별한"} 이야기를 선호하시는군요. 당신의 취향 DNA에 새겨진 최고의 작품들을 선별했습니다.`;
 }
 
 function getKoreanTitle(media) {
   const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
+  // 1. Check synonyms for Korean
   const krSynonym = media.synonyms?.find(s => koreanRegex.test(s));
   if (krSynonym) return krSynonym;
-  if (koreanRegex.test(media.title.native)) return media.title.native;
+  // 2. Check native title (sometimes it's Korean on AniList for Korean works)
+  if (media.title.native && koreanRegex.test(media.title.native)) return media.title.native;
   return null;
 }
 
@@ -117,7 +94,14 @@ function truncate(str, n) {
   return str && str.length > n ? str.slice(0, n) + "..." : str;
 }
 
-// ── RENDER FUNCTIONS ──
+// ── RENDERERS ──
+
+function render() {
+  if (state.phase === "intro") renderIntro();
+  else if (state.phase === "quiz") renderQuiz();
+  else if (state.phase === "loading") renderLoading();
+  else if (state.phase === "results") renderResults();
+}
 
 function renderIntro() {
   app.innerHTML = `
@@ -129,11 +113,11 @@ function renderIntro() {
       </div>
       <div class="fade-up delay-2">
         <p class="intro-desc">
-          단 5가지 질문으로 당신의 취향을 분석해<br>
-          <span style="color:#a0a0ff;font-weight:600">AniList</span> 데이터베이스에서<br>
-          딱 맞는 인생작을 찾아드립니다.
+          단 4가지 질문으로 당신의 취향을 분석해<br>
+          <span style="color:#a0a0ff;font-weight:600">AniList</span>의 방대한 데이터베이스에서<br>
+          가장 완벽하게 어울리는 작품을 찾아드립니다.
         </p>
-        <button class="primary-btn" onclick="startQuiz()">테스트 시작하기 →</button>
+        <button class="primary-btn" onclick="startQuiz()">분석 시작하기 →</button>
       </div>
     </div>
   `;
@@ -141,14 +125,14 @@ function renderIntro() {
 
 function renderQuiz() {
   const q = QUESTIONS[state.currentQ];
-  const progress = ((state.currentQ) / QUESTIONS.length) * 100;
+  const progress = (state.currentQ / QUESTIONS.length) * 100;
 
   app.innerHTML = `
-    <div class="quiz-container fade-up" id="quizContainer">
+    <div class="quiz-container fade-up">
       <div class="progress-bar-wrap">
         <div class="progress-info">
-          <span>질문 ${state.currentQ + 1} / ${QUESTIONS.length}</span>
-          <span id="progressText">${Math.round(progress)}%</span>
+          <span>STEP ${state.currentQ + 1} / ${QUESTIONS.length}</span>
+          <span>${Math.round(progress)}%</span>
         </div>
         <div class="progress-track">
           <div class="progress-fill" style="width: ${progress}%"></div>
@@ -164,8 +148,9 @@ function renderQuiz() {
 
         <div class="options-grid">
           ${q.options.map(opt => `
-            <button class="option-btn" data-value="${opt.value}" onclick="handleSelect('${opt.value}')">
-              <div class="check-mark hidden">✓</div>
+            <button class="option-btn ${state.selected === opt.value ? 'selected' : ''}" 
+                    onclick="handleSelect('${opt.value}')">
+              <div class="check-mark ${state.selected === opt.value ? '' : 'hidden'}">✓</div>
               <div style="font-size:18px;font-weight:700;margin-bottom:6px">${opt.label}</div>
               <div style="font-size:13px;color:#7777aa">${opt.desc}</div>
             </button>
@@ -173,8 +158,8 @@ function renderQuiz() {
         </div>
 
         <div style="display:flex;justify-content:center">
-          <button id="nextBtn" class="primary-btn" onclick="handleNext()" disabled>
-            ${state.currentQ < QUESTIONS.length - 1 ? "다음 →" : "결과 보기 ✨"}
+          <button id="nextBtn" class="primary-btn" onclick="handleNext()" ${!state.selected ? 'disabled' : ''}>
+            ${state.currentQ < QUESTIONS.length - 1 ? "다음 단계 →" : "DNA 분석 결과 보기 ✨"}
           </button>
         </div>
       </div>
@@ -187,8 +172,8 @@ function renderLoading() {
     <div class="loading-container fade-up">
       <div class="spinner"></div>
       <div style="text-align:center">
-        <p style="font-size:20px;font-weight:700;margin-bottom:8px">${state.loadingMessage}</p>
-        <p style="color:#7777aa;font-size:14px">AniList DB 연결 중...</p>
+        <p style="font-size:20px;font-weight:700;margin-bottom:8px">당신의 DNA를 분석 중입니다...</p>
+        <p style="color:#7777aa;font-size:14px">방대한 데이터베이스에서 매칭점을 찾는 중</p>
       </div>
     </div>
   `;
@@ -200,19 +185,19 @@ function renderResults() {
   app.innerHTML = `
     <div class="results-container fade-up">
       <div style="text-align:center;margin-bottom:40px">
-        <div style="font-size:13px;letter-spacing:4px;color:#7777ff;margin-bottom:16px;font-weight:600">✦ ANALYSIS REPORT ✦</div>
+        <div style="font-size:13px;letter-spacing:4px;color:#7777ff;margin-bottom:16px;font-weight:600">✦ ANALYSIS COMPLETED ✦</div>
         <h2 style="font-size:clamp(28px,5vw,48px);font-weight:900;margin-bottom:24px;background:linear-gradient(135deg,#ffffff,#a0a0ff,#ff6bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px">
-          당신의 취향 분석 결과
+          취향 분석 리포트
         </h2>
         
-        <div style="background:rgba(255,255,255,0.05);padding:24px;border-radius:16px;margin-bottom:32px;border:1px solid rgba(120,120,255,0.2);line-height:1.7;color:#e8e8ff;max-width:800px;margin-left:auto;margin-right:auto">
+        <div style="background:rgba(255,255,255,0.05);padding:24px;border-radius:16px;margin-bottom:32px;border:1px solid rgba(120,120,255,0.2);line-height:1.7;color:#e8e8ff;max-width:800px;margin-left:auto;margin-right:auto;text-align:left">
           <p style="font-size:16px;font-weight:500">${state.analysisText}</p>
         </div>
       </div>
 
       ${state.error ? `
-        <div style="text-align:center;padding:20px;color:#ffaa88;margin-bottom:20px;font-size:14px">
-          ⚠️ ${state.error} 대신 인기 추천작을 보여드릴게요!
+        <div style="text-align:center;padding:40px;color:#ff8888;background:rgba(255,80,80,0.05);border:1px solid rgba(255,80,80,0.2);border-radius:16px;margin-bottom:32px">
+          ${state.error}
         </div>
       ` : ''}
 
@@ -220,16 +205,13 @@ function renderResults() {
         ${visibleItems.map((anime, i) => {
           const krTitle = getKoreanTitle(anime);
           const titleMain = krTitle || anime.title.english || anime.title.romaji;
-          
+          const titleSub = krTitle ? (anime.title.english || anime.title.romaji) : (anime.title.native || "");
+
           return `
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
             <div class="cover-wrap">
-              ${anime.bannerImage || anime.coverImage?.large ? `
-                <img class="cover-img" src="${anime.bannerImage || anime.coverImage?.large}" alt="cover">
-              ` : `
-                <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1a0a3a,#0a1a3a);display:flex;align-items:center;justify-content:center;font-size:48px">🎌</div>
-              `}
+              <img class="cover-img" src="${anime.bannerImage || anime.coverImage.large}" alt="cover">
               <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.95) 0%,transparent 50%)"></div>
               
               ${anime.averageScore ? `
@@ -239,22 +221,20 @@ function renderResults() {
 
             <div class="card-body">
               <div class="title-row">
-                <img class="thumb-img" src="${anime.coverImage?.large}" alt="">
+                <img class="thumb-img" src="${anime.coverImage.large}" alt="">
                 <div style="flex:1;min-width:0">
                   <h3 class="anime-title">${titleMain}</h3>
-                  <p style="font-size:12px;color:#7777aa">${anime.title?.native || ''}</p>
+                  <p style="font-size:12px;color:#7777aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleSub}</p>
                 </div>
               </div>
 
               <div class="genre-row">
-                ${anime.genres?.slice(0, 3).map(g => `<span class="genre-chip">${g}</span>`).join('')}
+                ${anime.genres.slice(0, 3).map(g => `<span class="genre-chip">${g}</span>`).join('')}
               </div>
 
-              ${anime.description ? `
-                <p class="anime-desc">${truncate(anime.description.replace(/<[^>]*>/g, ""), 90)}</p>
-              ` : ''}
+              <p class="anime-desc">${truncate(anime.description?.replace(/<[^>]*>/g, "") || "설명이 없습니다.", 100)}</p>
 
-              <div class="cta-box">상세 정보 보기 →</div>
+              <div class="cta-box">상세 정보 및 리뷰 보기 →</div>
             </div>
           </div>
         `}).join('')}
@@ -262,14 +242,14 @@ function renderResults() {
 
       ${state.results.length > state.visibleCount ? `
         <div style="text-align:center;margin-bottom:40px">
-           <button class="primary-btn" onclick="showMore()" style="padding:14px 40px;font-size:14px;background:rgba(120,120,255,0.1)">
-             + 더 보기 (${state.results.length - state.visibleCount})
+           <button class="primary-btn" onclick="showMore()" style="padding:14px 40px;font-size:14px;background:rgba(120,120,255,0.1);box-shadow:none">
+             나머지 추천 작품 더 보기 (+${state.results.length - state.visibleCount})
            </button>
         </div>
       ` : ''}
 
       <div style="text-align:center">
-        <button class="restart-btn" onclick="restart()">🔄 다시 테스트하기</button>
+        <button class="restart-btn" onclick="restart()">🔄 처음부터 다시 하기</button>
       </div>
     </div>
   `;
@@ -284,29 +264,19 @@ window.startQuiz = () => {
 
 window.handleSelect = (val) => {
   state.selected = val;
-  document.querySelectorAll('.option-btn').forEach(btn => {
-    if (btn.dataset.value === val) {
-      btn.classList.add('selected');
-      btn.querySelector('.check-mark').classList.remove('hidden');
-    } else {
-      btn.classList.remove('selected');
-      btn.querySelector('.check-mark').classList.add('hidden');
-    }
-  });
-  document.getElementById('nextBtn').disabled = false;
+  render(); // Update selection UI
 };
 
-window.handleNext = () => {
+window.handleNext = async () => {
   if (!state.selected) return;
-  const q = QUESTIONS[state.currentQ];
-  state.answers[q.id] = state.selected;
+  state.answers[QUESTIONS[state.currentQ].id] = state.selected;
 
   if (state.currentQ < QUESTIONS.length - 1) {
     state.currentQ++;
     state.selected = null;
     render();
   } else {
-    fetchAniListRecommendations();
+    await fetchAniListResults();
   }
 };
 
@@ -326,90 +296,51 @@ window.restart = () => {
   render();
 };
 
-async function fetchAniListRecommendations() {
+async function fetchAniListResults() {
   state.phase = "loading";
-  state.loadingMessage = "취향 분석 중...";
   render();
 
   state.analysisText = generateAnalysis(state.answers);
-  
-  // Direct Genre Mapping (Simple & Robust)
-  const genreSet = new Set();
-  // Valid AniList Genres: Action, Adventure, Comedy, Drama, Fantasy, Horror, Mecha, Mystery, Psychological, Romance, Sci-Fi, Slice of Life, Sports, Supernatural, Thriller
-  if(state.answers.mood) genreSet.add(state.answers.mood);
-  if(state.answers.world) genreSet.add(state.answers.world);
-  if(state.answers.theme) genreSet.add(state.answers.theme);
-  
-  const genres = Array.from(genreSet);
+
+  const genres = [state.answers.mood, state.answers.world, state.answers.theme].filter(Boolean);
   const randomPage = Math.floor(Math.random() * 5) + 1;
 
   const query = `
-    query ($genres: [String], $page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(
-          type: ANIME
-          genre_in: $genres
-          sort: [SCORE_DESC, POPULARITY_DESC]
-          isAdult: false
-        ) {
+    query ($genres: [String], $page: Int) {
+      Page(page: $page, perPage: 18) {
+        media(type: ANIME, genre_in: $genres, sort: [SCORE_DESC, POPULARITY_DESC], isAdult: false) {
           id
           title { romaji english native }
           synonyms
           coverImage { large }
           bannerImage
-          description(asHtml: false)
+          description
           averageScore
-          episodes
           genres
-          studios(isMain: true) { nodes { name } }
         }
       }
     }
   `;
 
-  const variables = {
-    genres: genres.length > 0 ? genres : ["Action"], // Fallback genre
-    page: randomPage,
-    perPage: 18
-  };
-
   try {
-    const res = await fetch("https://graphql.anilist.co", {
+    const response = await fetch("https://graphql.anilist.co", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query, variables }),
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ query, variables: { genres, page: randomPage } }),
     });
-    
-    if (!res.ok) throw new Error("Network response was not ok");
-    
-    const data = await res.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-    
-    let rawResults = data?.data?.Page?.media || [];
-    
-    if (rawResults.length === 0) {
-      throw new Error("No results found");
-    }
 
-    state.results = shuffleArray(rawResults);
+    const data = await response.json();
+    if (data.errors) throw new Error(data.errors[0].message);
+
+    state.results = shuffleArray(data.data.Page.media || []);
     state.phase = "results";
   } catch (e) {
-    console.error("API Error, using fallback:", e);
-    state.error = "네트워크 상태가 불안정하여 인기작을 보여드립니다.";
-    // USE FALLBACK DATA
-    state.results = shuffleArray([...BACKUP_ANIME]);
+    console.error(e);
+    state.error = "데이터를 가져오는데 실패했습니다. 네트워크를 확인해주세요.";
     state.phase = "results";
   }
   render();
 }
 
-function render() {
-  if (state.phase === "intro") renderIntro();
-  else if (state.phase === "quiz") renderQuiz();
-  else if (state.phase === "loading") renderLoading();
-  else if (state.phase === "results") renderResults();
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  render();
-});
+// Start
+document.addEventListener("DOMContentLoaded", render);
