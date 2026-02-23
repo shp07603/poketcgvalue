@@ -416,7 +416,7 @@ body {
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
-  opacity: 0; /* for animation */
+  /* opacity: 0; removed */
 }
 
 .anime-card:hover {
@@ -427,7 +427,7 @@ body {
 
 .cover-wrap {
   position: relative;
-  padding-bottom: 56%;
+  padding-bottom: 145%;
   overflow: hidden;
 }
 

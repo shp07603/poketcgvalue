@@ -217,7 +217,7 @@ function renderResults() {
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
             <div class="cover-wrap">
-              <img class="cover-img" src="${anime.bannerImage || anime.coverImage.large}" alt="cover">
+              <img class="cover-img" src="${anime.coverImage.extraLarge || anime.coverImage.large}" alt="cover">
               <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.95) 0%,transparent 50%)"></div>
               
               ${anime.averageScore ? `
