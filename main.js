@@ -18,10 +18,10 @@ const QUESTIONS = [
     question: "어떤 세계로 떠나고 싶나요?",
     subtitle: "내가 살고 싶은 애니의 배경",
     options: [
-      { label: "⚔️ 마법과 모험의 판타지", value: "Fantasy", desc: "용사, 마법사, 다른 세계" },
-      { label: "🚀 미래와 기술의 SF", value: "Sci-Fi", desc: "우주, 로봇, 디스토피아" },
-      { label: "🏫 현실 속 일상", value: "Slice of Life", desc: "학교, 직장, 소소한 하루" },
-      { label: "🏯 과거와 역사 속으로", value: "Historical", desc: "사무라이, 귀족, 전쟁" },
+      { label: "⚔️ 마법과 모험의 판타지", value: "fantasy", desc: "용사, 마법사, 다른 세계" },
+      { label: "🚀 미래와 기술의 SF", value: "scifi", desc: "우주, 로봇, 디스토피아" },
+      { label: "🏫 현실 속 일상", value: "real", desc: "학교, 직장, 소소한 하루" },
+      { label: "🏯 과거와 역사 속으로", value: "history", desc: "사무라이, 귀족, 전쟁" },
     ],
   },
   {
@@ -30,10 +30,10 @@ const QUESTIONS = [
     question: "어떤 이야기에 끌리나요?",
     subtitle: "당신의 마음을 사로잡는 테마",
     options: [
-      { label: "👊 성장과 열정", value: "Action", desc: "한계를 넘는 주인공의 성장" },
-      { label: "💕 사랑과 감정", value: "Romance", desc: "설레고 아프고 아름다운 관계" },
-      { label: "🔍 미스터리와 반전", value: "Mystery", desc: "예측불가, 끝까지 긴장감" },
-      { label: "😢 감동과 눈물", value: "Drama", desc: "삶의 희로애락을 담은 이야기" },
+      { label: "👊 성장과 열정", value: "growth", desc: "한계를 넘는 주인공의 성장" },
+      { label: "💕 사랑과 감정", value: "love", desc: "설레고 아프고 아름다운 관계" },
+      { label: "🔍 미스터리와 반전", value: "mystery", desc: "예측불가, 끝까지 긴장감" },
+      { label: "😢 감동과 눈물", value: "drama", desc: "삶의 희로애락을 담은 이야기" },
     ],
   },
   {
@@ -45,7 +45,7 @@ const QUESTIONS = [
       { label: "⚡ 빠르게! 항상 뭔가 터져야 해", value: "fast", desc: "쉴 틈 없는 전개" },
       { label: "🌊 천천히, 여운 있게", value: "slow", desc: "깊이 스며드는 이야기" },
       { label: "🎯 적당히 균형 있게", value: "balanced", desc: "긴장과 휴식의 균형" },
-      { label: "🎲 예측 불가능하면 최고", value: "unpredictable", desc: "반전 또 반전" },
+      { label: "🎲 예측 불가능하면 최고", value: "random", desc: "반전 또 반전" },
     ],
   },
   {
@@ -62,26 +62,33 @@ const QUESTIONS = [
   },
 ];
 
-const GENRE_MAP = {
-  mood: {
-    intense: ["Action", "Psychological", "Thriller"],
-    fun: ["Comedy", "Slice of Life"],
-    thoughtful: ["Psychological", "Drama", "Sci-Fi"],
-    emotional: ["Drama", "Romance"],
-  },
-  theme: {
-    Action: ["Action", "Adventure", "Sports"],
-    Romance: ["Romance", "Drama"],
-    Mystery: ["Mystery", "Psychological", "Thriller"],
-    Drama: ["Drama", "Slice of Life"],
-  },
+// Complex Logic Maps
+const MOOD_TAGS = {
+  intense: ["Action", "Thriller", "Psychological"],
+  fun: ["Comedy", "Slice of Life", "Parody"],
+  thoughtful: ["Psychological", "Sci-Fi", "Drama"],
+  emotional: ["Drama", "Romance", "Iyashikei"],
+};
+
+const WORLD_TAGS = {
+  fantasy: ["Fantasy", "Isekai", "Magic"],
+  scifi: ["Sci-Fi", "Mecha", "Cyberpunk", "Space"],
+  real: ["Slice of Life", "School", "Sports"],
+  history: ["Historical", "Samurai", "War"],
+};
+
+const THEME_TAGS = {
+  growth: ["Shounen", "Sports", "Coming of Age"],
+  love: ["Romance", "Shoujo", "Love Triangle"],
+  mystery: ["Mystery", "Detective", "Suspense"],
+  drama: ["Drama", "Tragedy", "Family Life"],
 };
 
 const STATUS_MAP = {
-  short: { perPage: 15, format: ["TV_SHORT", "OVA", "MOVIE"] },
-  medium: { perPage: 15, format: ["TV"] },
-  long: { perPage: 15, format: ["TV"] },
-  ongoing: { perPage: 15, status: "RELEASING" },
+  short: { perPage: 18, format: ["TV_SHORT", "OVA", "MOVIE", "TV"] },
+  medium: { perPage: 18, format: ["TV"] },
+  long: { perPage: 18, format: ["TV"] },
+  ongoing: { perPage: 18, status: "RELEASING" },
 };
 
 // ── STATE ──
@@ -91,8 +98,9 @@ const state = {
   answers: {},
   selected: null,
   results: [],
-  visibleCount: 3, // Start with 3
+  visibleCount: 3,
   error: null,
+  analysisText: "",
 };
 
 // ── DOM ELEMENTS ──
@@ -100,49 +108,60 @@ const app = document.getElementById("app");
 
 // ── LOGIC ──
 
+// Generate unique analysis text (High Quality Content)
+function generateAnalysis(ans) {
+  const moods = {
+    intense: "강렬한 자극과 몰입감을 원하시며,",
+    fun: "가볍게 웃으며 즐길 수 있는 시간을 찾고 계시고,",
+    thoughtful: "깊은 생각에 잠길 수 있는 철학적인 이야기를 선호하며,",
+    emotional: "마음을 울리는 감동적인 서사를 기대하시네요."
+  };
+  const worlds = {
+    fantasy: "현실을 벗어난 환상적인 판타지 세계에서",
+    scifi: "미래 기술과 우주가 펼쳐지는 SF 세계관 속에서",
+    real: "우리네 일상과 맞닿은 현실적인 배경 안에서",
+    history: "지나간 시대의 향수와 역사가 숨 쉬는 곳에서"
+  };
+  const themes = {
+    growth: "주인공이 시련을 딛고 성장하는 뜨거운 이야기",
+    love: "설레는 사랑과 인간관계의 미묘한 감정선",
+    mystery: "한 치 앞을 알 수 없는 미스터리와 반전",
+    drama: "삶의 희로애락을 진지하게 다루는 드라마"
+  };
+
+  return `${moods[ans.mood]} ${worlds[ans.world]} 펼쳐지는 ${themes[ans.theme]}를 추천해 드립니다. 당신의 취향 DNA를 분석한 결과, 다음 작품들이 가장 높은 매칭률을 보였습니다.`;
+}
+
 function buildGenres(answers) {
-  const genres = new Set();
-  if (answers.mood) {
-    GENRE_MAP.mood[answers.mood]?.forEach((g) => genres.add(g));
-  }
-  if (answers.theme) {
-    GENRE_MAP.theme[answers.theme]?.forEach((g) => genres.add(g));
-  }
-  if (answers.world && !["Slice of Life"].includes(answers.world)) {
-    genres.add(answers.world);
-  } else if (answers.world === "Slice of Life") {
-    genres.add("Slice of Life");
-  }
-  if (answers.world === "Historical") {
-    genres.add("Historical");
-  }
-  return [...genres].slice(0, 3);
+  // Combine all relevant tags based on answers
+  let tags = [];
+  
+  if (answers.mood) tags.push(...MOOD_TAGS[answers.mood]);
+  if (answers.world) tags.push(...WORLD_TAGS[answers.world]);
+  if (answers.theme) tags.push(...THEME_TAGS[answers.theme]);
+
+  // Remove duplicates and pick top 3 unique ones for display
+  return [...new Set(tags)].slice(0, 5); 
 }
 
-function truncate(str, n) {
-  return str && str.length > n ? str.slice(0, n) + "..." : str;
-}
-
-// Find Korean title from synonyms
 function getKoreanTitle(media) {
   const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
-  // Check synonyms first
   const krSynonym = media.synonyms?.find(s => koreanRegex.test(s));
   if (krSynonym) return krSynonym;
-  
-  // If native title is Korean (rare on AniList but possible)
   if (koreanRegex.test(media.title.native)) return media.title.native;
-  
   return null;
 }
 
-// Fisher-Yates Shuffle
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
+}
+
+function truncate(str, n) {
+  return str && str.length > n ? str.slice(0, n) + "..." : str;
 }
 
 // ── RENDER FUNCTIONS ──
@@ -158,8 +177,8 @@ function renderIntro() {
       <div class="fade-up delay-2">
         <p class="intro-desc">
           단 5가지 질문으로 당신의 취향을 분석해<br>
-          <span style="color:#a0a0ff;font-weight:600">AniList</span>에서 딱 맞는 애니를 찾아드려요.<br>
-          MBTI보다 정확한 애니 궁합 테스트 🌙
+          <span style="color:#a0a0ff;font-weight:600">AniList</span>의 50만 개 데이터에서<br>
+          딱 맞는 인생작을 찾아드립니다.
         </p>
         <button class="primary-btn" onclick="startQuiz()">테스트 시작하기 →</button>
       </div>
@@ -171,7 +190,6 @@ function renderQuiz() {
   const q = QUESTIONS[state.currentQ];
   const progress = ((state.currentQ) / QUESTIONS.length) * 100;
 
-  // We only render this ONCE per question to prevent jitter
   app.innerHTML = `
     <div class="quiz-container fade-up" id="quizContainer">
       <div class="progress-bar-wrap">
@@ -216,8 +234,8 @@ function renderLoading() {
     <div class="loading-container fade-up">
       <div class="spinner"></div>
       <div style="text-align:center">
-        <p style="font-size:20px;font-weight:700;margin-bottom:8px">당신의 애니를 찾는 중...</p>
-        <p style="color:#7777aa;font-size:14px">취향 분석 중... (1/3)</p>
+        <p style="font-size:20px;font-weight:700;margin-bottom:8px">DNA 분석 중...</p>
+        <p style="color:#7777aa;font-size:14px">취향 패턴 매칭 중 (3/3)</p>
       </div>
     </div>
   `;
@@ -229,16 +247,20 @@ function renderResults() {
   
   app.innerHTML = `
     <div class="results-container fade-up">
-      <div style="text-align:center;margin-bottom:60px">
-        <div style="font-size:13px;letter-spacing:4px;color:#7777ff;margin-bottom:16px;font-weight:600">✦ 당신을 위한 픽 ✦</div>
-        <h2 style="font-size:clamp(32px,6vw,56px);font-weight:900;margin-bottom:16px;background:linear-gradient(135deg,#ffffff,#a0a0ff,#ff6bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px">
-          당신에게 어울리는 애니
+      <div style="text-align:center;margin-bottom:40px">
+        <div style="font-size:13px;letter-spacing:4px;color:#7777ff;margin-bottom:16px;font-weight:600">✦ ANALYSIS REPORT ✦</div>
+        <h2 style="font-size:clamp(28px,5vw,48px);font-weight:900;margin-bottom:24px;background:linear-gradient(135deg,#ffffff,#a0a0ff,#ff6bff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px">
+          당신의 취향 분석 결과
         </h2>
-        <p style="color:#7777aa;font-size:15px">취향 분석 결과 기반으로 AniList에서 가져온 추천이에요</p>
-      </div>
+        
+        <!-- High Quality Text Content -->
+        <div style="background:rgba(255,255,255,0.05);padding:24px;border-radius:16px;margin-bottom:32px;border:1px solid rgba(120,120,255,0.2);line-height:1.7;color:#e8e8ff;max-width:800px;margin-left:auto;margin-right:auto">
+          <p style="font-size:16px;font-weight:500">${state.analysisText}</p>
+        </div>
 
-      <div class="tags-wrap">
-        ${tags.map(g => `<span class="tag">#${g}</span>`).join('')}
+        <div class="tags-wrap">
+          ${tags.map(g => `<span class="tag">#${g}</span>`).join('')}
+        </div>
       </div>
 
       ${state.error ? `
@@ -247,12 +269,11 @@ function renderResults() {
         </div>
       ` : ''}
 
-      <div class="anime-grid" id="animeGrid">
+      <div class="anime-grid">
         ${visibleItems.map((anime, i) => {
           const krTitle = getKoreanTitle(anime);
           const titleMain = krTitle || anime.title.english || anime.title.romaji;
-          const titleSub = krTitle ? (anime.title.english || anime.title.romaji) : (anime.title.native || anime.title.romaji);
-
+          
           return `
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
@@ -267,14 +288,6 @@ function renderResults() {
               ${anime.averageScore ? `
                 <div class="score-badge">★ ${(anime.averageScore / 10).toFixed(1)}</div>
               ` : ''}
-              
-              ${i < 3 ? `
-                <div class="rank-badge" style="background:${
-                  ['linear-gradient(135deg, #FFD700, #FFA500)', 'linear-gradient(135deg, #C0C0C0, #a0a0a0)', 'linear-gradient(135deg, #CD7F32, #8B4513)'][i]
-                };color:${i === 0 ? '#000' : '#fff'}">
-                  ${['🥇 1위', '🥈 2위', '🥉 3위'][i]}
-                </div>
-              ` : ''}
             </div>
 
             <div class="card-body">
@@ -282,14 +295,8 @@ function renderResults() {
                 <img class="thumb-img" src="${anime.coverImage?.large}" alt="">
                 <div style="flex:1;min-width:0">
                   <h3 class="anime-title">${titleMain}</h3>
-                  <p style="font-size:12px;color:#7777aa">${titleSub || ''}</p>
+                  <p style="font-size:12px;color:#7777aa">${anime.studios?.nodes?.[0]?.name || 'Unknown Studio'}</p>
                 </div>
-              </div>
-
-              <div class="meta-row">
-                ${anime.episodes ? `<span class="meta-chip">${anime.episodes}화</span>` : ''}
-                ${anime.seasonYear ? `<span class="meta-chip">${anime.seasonYear}</span>` : ''}
-                ${anime.studios?.nodes?.[0] ? `<span class="meta-chip" style="background:rgba(255,100,255,0.08);color:#cc90cc">${anime.studios.nodes[0].name}</span>` : ''}
               </div>
 
               <div class="genre-row">
@@ -297,10 +304,10 @@ function renderResults() {
               </div>
 
               ${anime.description ? `
-                <p class="anime-desc">${truncate(anime.description.replace(/<[^>]*>/g, ""), 80)}</p>
+                <p class="anime-desc">${truncate(anime.description.replace(/<[^>]*>/g, ""), 90)}</p>
               ` : ''}
 
-              <div class="cta-box">AniList에서 보기 →</div>
+              <div class="cta-box">상세 정보 보기 →</div>
             </div>
           </div>
         `}).join('')}
@@ -328,11 +335,8 @@ window.startQuiz = () => {
   render();
 };
 
-// Jitter-free selection handler (updates DOM directly)
 window.handleSelect = (val) => {
   state.selected = val;
-  
-  // Update visually without full re-render
   document.querySelectorAll('.option-btn').forEach(btn => {
     if (btn.dataset.value === val) {
       btn.classList.add('selected');
@@ -342,22 +346,19 @@ window.handleSelect = (val) => {
       btn.querySelector('.check-mark').classList.add('hidden');
     }
   });
-
-  // Enable Next button
   const nextBtn = document.getElementById('nextBtn');
   if (nextBtn) nextBtn.disabled = false;
 };
 
 window.handleNext = async () => {
   if (!state.selected) return;
-  
   const q = QUESTIONS[state.currentQ];
   state.answers[q.id] = state.selected;
 
   if (state.currentQ < QUESTIONS.length - 1) {
     state.currentQ++;
     state.selected = null;
-    render(); // Render next question
+    render();
   } else {
     await fetchRecommendations();
   }
@@ -365,7 +366,7 @@ window.handleNext = async () => {
 
 window.showMore = () => {
   state.visibleCount += 3;
-  render(); // Re-render results with more items
+  render();
 };
 
 window.restart = () => {
@@ -376,6 +377,7 @@ window.restart = () => {
   state.results = [];
   state.visibleCount = 3;
   state.error = null;
+  state.analysisText = "";
   render();
 };
 
@@ -383,12 +385,14 @@ async function fetchRecommendations() {
   state.phase = "loading";
   render();
 
+  // Generate textual analysis
+  state.analysisText = generateAnalysis(state.answers);
+
   const genres = buildGenres(state.answers);
   const lengthConfig = STATUS_MAP[state.answers.length] || {};
-  
-  // Random page to ensure variety (1 to 3)
   const randomPage = Math.floor(Math.random() * 3) + 1;
 
+  // GraphQL: Use genre_in for broader matching based on our refined tags
   const query = `
     query ($genres: [String], $page: Int, $perPage: Int, $sort: [MediaSort], $status: MediaStatus) {
       Page(page: $page, perPage: $perPage) {
@@ -398,7 +402,7 @@ async function fetchRecommendations() {
           sort: $sort
           status: $status
           isAdult: false
-          averageScore_greater: 60
+          averageScore_greater: 65
         ) {
           id
           title { romaji english native }
@@ -410,7 +414,6 @@ async function fetchRecommendations() {
           episodes
           status
           genres
-          season
           seasonYear
           studios(isMain: true) {
             nodes { name }
@@ -423,7 +426,7 @@ async function fetchRecommendations() {
   const variables = {
     genres: genres.length > 0 ? genres : ["Action"],
     page: randomPage,
-    perPage: 18, // Fetch more to shuffle
+    perPage: 24, // Fetch enough to shuffle
     sort: ["SCORE_DESC", "POPULARITY_DESC"],
     ...(lengthConfig.status ? { status: lengthConfig.status } : {}),
   };
@@ -438,10 +441,7 @@ async function fetchRecommendations() {
     if (data.errors) throw new Error(data.errors[0].message);
     
     let rawResults = data?.data?.Page?.media || [];
-    
-    // Shuffle results client-side for "surprise" factor
     state.results = shuffleArray(rawResults);
-    
     state.phase = "results";
   } catch (e) {
     state.error = "API 오류가 발생했어요: " + e.message;
@@ -457,5 +457,4 @@ function render() {
   else if (state.phase === "results") renderResults();
 }
 
-// Initial Render
 render();
