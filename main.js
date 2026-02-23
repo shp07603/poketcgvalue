@@ -48,20 +48,53 @@ const QUESTIONS = [
       { label: "🎲 예측 불가능하면 최고", value: "random", desc: "반전 또 반전" },
     ],
   },
+  {
+    id: "length",
+    emoji: "📺",
+    question: "얼마나 깊이 빠져들 준비가 됐나요?",
+    subtitle: "선호하는 애니 분량",
+    options: [
+      { label: "💫 한 호흡에 끝내고 싶어 (1~12화)", value: "short", desc: "집중해서 완주!" },
+      { label: "📖 딱 적당한 분량 (13~26화)", value: "medium", desc: "하루이틀이면 정주행" },
+      { label: "🌌 세계에 완전히 빠지고 싶어 (26화+)", value: "long", desc: "긴 여정의 감동" },
+      { label: "🔄 지금도 방영 중인 것도 괜찮아", value: "ongoing", desc: "매주 설레는 업데이트" },
+    ],
+  },
 ];
 
-// Fallback Data (API Error/Empty Safety)
-const BACKUP_ANIME = [
-  { id: 1, title: { romaji: "Cowboy Bebop", english: "Cowboy Bebop", native: "カウボーイビバップ" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png" }, averageScore: 86, genres: ["Action", "Sci-Fi"], description: "2071년, 우주 현상금 사냥꾼들의 스타일리시한 액션 활극." },
-  { id: 21, title: { romaji: "One Piece", english: "One Piece", native: "ONE PIECE" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21-tXMN3Y20PIL9.jpg" }, averageScore: 88, genres: ["Action", "Adventure"], description: "해적왕을 꿈꾸는 루피와 동료들의 위대한 모험." },
-  { id: 16498, title: { romaji: "Shingeki no Kyojin", english: "Attack on Titan", native: "進撃の巨人" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-m5ZMNtFioc7j.jpg" }, averageScore: 85, genres: ["Action", "Drama"], description: "식인 거인에 맞선 인류의 처절한 생존 투쟁." },
-  { id: 9253, title: { romaji: "Steins;Gate", english: "Steins;Gate", native: "シュタインズ・ゲート" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9253-7pdcVzQskqx5.jpg" }, averageScore: 90, genres: ["Sci-Fi", "Thriller"], description: "과거로 문자를 보내는 타임머신과 나비효과." },
-  { id: 21519, title: { romaji: "Kimi no Na wa.", english: "Your Name.", native: "君の名は。" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21519-IVCd8XTSX28d.jpg" }, averageScore: 89, genres: ["Romance", "Supernatural"], description: "꿈속에서 몸이 뒤바뀐 도시 소년과 시골 소녀의 기적 같은 이야기." },
-  { id: 19, title: { romaji: "Monster", english: "Monster", native: "MONSTER" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19-M52X862Xq5x8.png" }, averageScore: 88, genres: ["Drama", "Thriller"], description: "천재 외과 의사가 살려낸 소년이 연쇄살인마가 되어 돌아왔다." },
-  { id: 11061, title: { romaji: "Hunter x Hunter (2011)", english: "Hunter x Hunter (2011)", native: "HUNTER×HUNTER (2011)" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11061-sIpBprNrMz0R.png" }, averageScore: 89, genres: ["Action", "Adventure"], description: "아버지를 찾기 위해 헌터가 된 곤의 모험." },
-  { id: 20954, title: { romaji: "Koe no Katachi", english: "A Silent Voice", native: "聲の形" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20954-UMb6KI78iYWH.jpg" }, averageScore: 88, genres: ["Drama", "Romance"], description: "청각 장애 소녀와 그녀를 괴롭혔던 소년의 화해와 성장." },
-  { id: 14719, title: { romaji: "JoJo no Kimyou na Bouken (TV)", english: "JoJo's Bizarre Adventure", native: "ジョジョの奇妙な冒険" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14719-XFp497ZC8a6j.png" }, averageScore: 80, genres: ["Action", "Adventure"], description: "죠스타 가문과 디오 브란도의 세대를 넘은 기묘한 싸움." }
-];
+// ── ROBUST LOCAL DATABASE (GUARANTEED RESULTS) ──
+const ANIME_DB = {
+  Action: [
+    { id: 1, title: "강철의 연금술사 BROTHERHOOD", titleEn: "Fullmetal Alchemist: Brotherhood", score: 9.1, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5114-KKo3D7XNce7V.jpg", genres: ["Action", "Adventure"], desc: "연금술의 금기를 어긴 형제가 잃어버린 몸을 되찾기 위해 떠나는 장대한 여정." },
+    { id: 2, title: "귀멸의 칼날", titleEn: "Demon Slayer", score: 8.9, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101922-PEn1sxc9hJIh.jpg", genres: ["Action", "Supernatural"], desc: "혈귀에게 가족을 잃은 소년 탄지로가 혈귀 사냥꾼이 되어 싸우는 이야기." },
+    { id: 3, title: "주술회전", titleEn: "Jujutsu Kaisen", score: 8.7, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx113415-bbBWj4pEfseh.jpg", genres: ["Action", "Fantasy"], desc: "저주를 삼킨 소년이 최강의 주술사가 되기 위해 주술고전에 입학하며 벌어지는 이야기." },
+    { id: 4, title: "원펀맨", titleEn: "One Punch Man", score: 8.8, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx30276-802ba7J827i3.jpg", genres: ["Action", "Comedy"], desc: "취미로 히어로를 하는 남자, 사이타마. 너무 강해서 모든 적을 한 방에 끝낸다." },
+    { id: 5, title: "진격의 거인", titleEn: "Attack on Titan", score: 9.0, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-m5ZMNtFioc7j.jpg", genres: ["Action", "Drama"], desc: "식인 거인이 지배하는 세상, 벽 안에 갇힌 인류의 처절한 생존과 비밀." },
+    { id: 6, title: "나의 히어로 아카데미아", titleEn: "My Hero Academia", score: 8.5, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21459-o5172gko9iXW.jpg", genres: ["Action", "School"], desc: "개성이 없던 소년 미도리야가 최고의 히어로가 되기 위해 성장하는 이야기." },
+    { id: 7, title: "헌터X헌터 (2011)", titleEn: "Hunter x Hunter (2011)", score: 9.0, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11061-sIpBprNrMz0R.png", genres: ["Action", "Adventure"], desc: "아버지와 같은 헌터가 되기 위해 모험을 떠나는 곤의 우정과 성장." },
+    { id: 8, title: "카우보이 비밥", titleEn: "Cowboy Bebop", score: 8.9, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png", genres: ["Action", "Sci-Fi"], desc: "2071년 우주, 현상금 사냥꾼 스파이크와 동료들의 스타일리시한 하드보일드 액션." }
+  ],
+  Comedy: [
+    { id: 9, title: "스파이 패밀리", titleEn: "SPY x FAMILY", score: 8.6, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx140960-Yl5M3AiLjmkr.jpg", genres: ["Comedy", "Action"], desc: "스파이, 암살자, 초능력자가 서로 정체를 숨기고 가짜 가족이 되어 펼치는 코미디." },
+    { id: 10, title: "카구야 님은 고백받고 싶어", titleEn: "Kaguya-sama: Love is War", score: 8.8, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx101921-VPvH2GMQXljP.jpg", genres: ["Comedy", "Romance"], desc: "천재들의 연애 두뇌전. 먼저 고백하는 쪽이 지는 것이다!" },
+    { id: 11, title: "은혼", titleEn: "Gintama", score: 9.0, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx918-0j8Q6a3M7jLq.png", genres: ["Comedy", "Action"], desc: "에도 시대, 사무라이 정신을 가진 긴토키와 해결사 친구들의 엉망진창 코미디." },
+    { id: 12, title: "사이키 쿠스오의 재난", titleEn: "The Disastrous Life of Saiki K.", score: 8.6, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21804-1426w1d3s3sI.png", genres: ["Comedy", "Supernatural"], desc: "초능력자지만 평범하게 살고 싶은 사이키 쿠스오의 고난 가득한 일상." },
+    { id: 13, title: "코노스바", titleEn: "KonoSuba", score: 8.4, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21202-T53Jq775q8xR.png", genres: ["Comedy", "Fantasy"], desc: "이세계로 전생했지만 트롤링 파티원들과 함께하는 잉여신 아쿠아의 모험." }
+  ],
+  Romance: [
+    { id: 14, title: "너의 이름은.", titleEn: "Your Name.", score: 9.2, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21519-IVCd8XTSX28d.jpg", genres: ["Romance", "Drama"], desc: "꿈속에서 몸이 뒤바뀐 도시 소년 타키와 시골 소녀 미츠하의 기적 같은 사랑 이야기." },
+    { id: 15, title: "목소리의 형태", titleEn: "A Silent Voice", score: 9.0, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20954-UMb6KI78iYWH.jpg", genres: ["Romance", "Drama"], desc: "청각 장애 소녀 쇼코와 그녀를 괴롭혔던 소년 쇼야의 진정한 화해와 구원." },
+    { id: 16, title: "호리미야", titleEn: "Horimiya", score: 8.6, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx124080-h8EPH92nyRsq.jpg", genres: ["Romance", "School"], desc: "학교와 밖에서의 모습이 전혀 다른 두 남녀의 달콤하고 비밀스러운 연애." },
+    { id: 17, title: "4월은 너의 거짓말", titleEn: "Your Lie in April", score: 8.9, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20665-J5ig2qQYq3tq.png", genres: ["Romance", "Music"], desc: "트라우마로 피아노를 칠 수 없는 소년이 자유로운 바이올리니스트 소녀를 만나다." },
+    { id: 18, title: "후르츠 바스켓 (2019)", titleEn: "Fruits Basket", score: 8.8, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx104044-XytrK8G7g66G.jpg", genres: ["Romance", "Drama"], desc: "이성과 껴안으면 동물로 변하는 저주에 걸린 가문과 함께 살게 된 소녀의 치유 로맨스." }
+  ],
+  Drama: [
+    { id: 19, title: "바이올렛 에버가든", titleEn: "Violet Evergarden", score: 8.9, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21827-10F6m5085s5s.png", genres: ["Drama", "Fantasy"], desc: "전쟁 도구로 살았던 소녀가 편지 대필가가 되어 '사랑'의 의미를 깨달아가는 감동 대작." },
+    { id: 20, title: "클라나드", titleEn: "Clannad", score: 8.8, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx2167-37Qz4L1R033N.png", genres: ["Drama", "Romance"], desc: "가족과 친구, 연인의 소중함을 깨닫게 해주는 눈물 없이는 볼 수 없는 명작." },
+    { id: 21, title: "그날 본 꽃의 이름을 우리는 아직 모른다", titleEn: "Anohana", score: 8.7, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9989-qM739752mJkK.png", genres: ["Drama", "Supernatural"], desc: "어린 시절 죽은 친구의 유령이 나타나면서 멀어졌던 친구들이 다시 모여 상처를 치유한다." },
+    { id: 22, title: "몬스터", titleEn: "Monster", score: 8.9, img: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19-M52X862Xq5x8.png", genres: ["Drama", "Thriller"], desc: "천재 외과 의사가 살려낸 소년이 연쇄살인마가 되어 돌아왔다. 인간 본성에 대한 깊은 통찰." }
+  ]
+};
 
 // ── STATE ──
 const state = {
@@ -71,7 +104,6 @@ const state = {
   selected: null,
   results: [],
   visibleCount: 3,
-  error: null,
   analysisText: "",
 };
 
@@ -80,17 +112,9 @@ const app = document.getElementById("app");
 // ── LOGIC ──
 
 function generateAnalysis(ans) {
-  const moods = { Action: "짜릿한 액션", Comedy: "유쾌한 웃음", Drama: "깊은 여운", Romance: "설레는 로맨스" };
-  const worlds = { Fantasy: "환상의 세계", "Sci-Fi": "미래 기술", "Slice of Life": "소소한 일상", Supernatural: "신비로운 분위기" };
-  return `${worlds[ans.world] || "매력적인 세계"}에서 펼쳐지는 ${moods[ans.mood] || "특별한"} 이야기를 선호하시는군요.`;
-}
-
-function getKoreanTitle(media) {
-  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
-  const krSynonym = media.synonyms?.find(s => koreanRegex.test(s));
-  if (krSynonym) return krSynonym;
-  if (media.title.native && koreanRegex.test(media.title.native)) return media.title.native;
-  return null;
+  const moods = { Action: "강렬한 에너지", Comedy: "즐거운 웃음", Drama: "깊은 몰입감", Romance: "설레는 감정" };
+  const worlds = { Fantasy: "환상적인 세계", "Sci-Fi": "미래지향적 풍경", "Slice of Life": "소소한 일상", Supernatural: "신비로운 분위기" };
+  return `${worlds[ans.world] || "매력적인 세계"}에서 펼쳐지는 ${moods[ans.mood] || "특별한"} 이야기를 선호하시는군요. 당신의 취향 DNA에 새겨진 최고의 작품들을 선별했습니다.`;
 }
 
 function shuffleArray(array) {
@@ -125,7 +149,7 @@ function renderIntro() {
       <div class="fade-up delay-2">
         <p class="intro-desc">
           단 4가지 질문으로 당신의 취향을 분석해<br>
-          <span style="color:#a0a0ff;font-weight:600">AniList</span>의 방대한 데이터베이스에서<br>
+          <span style="color:#a0a0ff;font-weight:600">엄선된 데이터베이스</span>에서<br>
           가장 완벽하게 어울리는 작품을 찾아드립니다.
         </p>
         <button class="primary-btn" onclick="startQuiz()">분석 시작하기 →</button>
@@ -183,8 +207,8 @@ function renderLoading() {
     <div class="loading-container fade-up">
       <div class="spinner"></div>
       <div style="text-align:center">
-        <p style="font-size:20px;font-weight:700;margin-bottom:8px">DNA 분석 중...</p>
-        <p style="color:#7777aa;font-size:14px">AniList DB 연결 및 매칭 중</p>
+        <p style="font-size:20px;font-weight:700;margin-bottom:8px">당신의 DNA를 분석 중입니다...</p>
+        <p style="color:#7777aa;font-size:14px">취향 패턴 매칭 완료</p>
       </div>
     </div>
   `;
@@ -206,49 +230,35 @@ function renderResults() {
         </div>
       </div>
 
-      ${state.error ? `
-        <div style="text-align:center;padding:20px;color:#ffaa88;margin-bottom:30px;background:rgba(255,100,100,0.1);border-radius:10px;">
-          ⚠️ ${state.error} 대신 인기 명작 리스트를 보여드립니다.
-        </div>
-      ` : ''}
-
       <div class="anime-grid">
-        ${visibleItems.map((anime, i) => {
-          const krTitle = getKoreanTitle(anime);
-          const titleMain = krTitle || anime.title.english || anime.title.romaji;
-          const titleSub = krTitle ? (anime.title.english || anime.title.romaji) : (anime.title.native || "");
-
-          return `
+        ${visibleItems.map((anime, i) => `
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
             <div class="cover-wrap">
-              <img class="cover-img" src="${anime.bannerImage || anime.coverImage?.large}" alt="cover">
+              <img class="cover-img" src="${anime.img}" alt="cover">
               <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.95) 0%,transparent 50%)"></div>
-              
-              ${anime.averageScore ? `
-                <div class="score-badge">★ ${(anime.averageScore / 10).toFixed(1)}</div>
-              ` : ''}
+              <div class="score-badge">★ ${anime.score}</div>
             </div>
 
             <div class="card-body">
               <div class="title-row">
-                <img class="thumb-img" src="${anime.coverImage?.large}" alt="">
+                <img class="thumb-img" src="${anime.img}" alt="">
                 <div style="flex:1;min-width:0">
-                  <h3 class="anime-title">${titleMain}</h3>
-                  <p style="font-size:12px;color:#7777aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleSub}</p>
+                  <h3 class="anime-title">${anime.title}</h3>
+                  <p style="font-size:12px;color:#7777aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${anime.titleEn}</p>
                 </div>
               </div>
 
               <div class="genre-row">
-                ${anime.genres?.slice(0, 3).map(g => `<span class="genre-chip">${g}</span>`).join('')}
+                ${anime.genres.map(g => `<span class="genre-chip">${g}</span>`).join('')}
               </div>
 
-              <p class="anime-desc">${truncate(anime.description?.replace(/<[^>]*>/g, "") || "설명이 없습니다.", 100)}</p>
+              <p class="anime-desc">${truncate(anime.desc, 80)}</p>
 
               <div class="cta-box">상세 정보 보기 →</div>
             </div>
           </div>
-        `}).join('')}
+        `).join('')}
       </div>
 
       ${state.results.length > state.visibleCount ? `
@@ -275,10 +285,10 @@ window.startQuiz = () => {
 
 window.handleSelect = (val) => {
   state.selected = val;
-  render(); // Update selection UI
+  render();
 };
 
-window.handleNext = async () => {
+window.handleNext = () => {
   if (!state.selected) return;
   state.answers[QUESTIONS[state.currentQ].id] = state.selected;
 
@@ -287,7 +297,8 @@ window.handleNext = async () => {
     state.selected = null;
     render();
   } else {
-    await fetchAniListResults();
+    // Process Results Locally
+    processResults();
   }
 };
 
@@ -307,74 +318,29 @@ window.restart = () => {
   render();
 };
 
-async function fetchAniListResults() {
+function processResults() {
   state.phase = "loading";
   render();
 
   state.analysisText = generateAnalysis(state.answers);
 
-  // CRITICAL FIX: Use ONLY the primary 'mood' genre for search to ensure results.
-  // Using multiple genres (AND condition) often returns 0 results.
-  // We prioritize Mood, then randomize pages for variety.
-  const targetGenre = state.answers.mood; 
-  const randomPage = Math.floor(Math.random() * 3) + 1;
+  // 1. Get primary mood results
+  let moodResults = ANIME_DB[state.answers.mood] || [];
+  
+  // 2. Get fallback/mix results from other categories if needed (Optional, keeping it simple for now)
+  // For now, just shuffle the mood results to vary the order
+  let finalResults = shuffleArray([...moodResults]);
 
-  const query = `
-    query ($genre: String, $page: Int) {
-      Page(page: $page, perPage: 20) {
-        media(
-          type: ANIME, 
-          genre: $genre, 
-          sort: [SCORE_DESC, POPULARITY_DESC], 
-          isAdult: false,
-          averageScore_greater: 65
-        ) {
-          id
-          title { romaji english native }
-          synonyms
-          coverImage { large }
-          bannerImage
-          description
-          averageScore
-          genres
-        }
-      }
-    }
-  `;
-
-  try {
-    // Timeout Promise to prevent infinite loading
-    const fetchPromise = fetch("https://graphql.anilist.co", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ query, variables: { genre: targetGenre, page: randomPage } }),
-    });
-
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout")), 6000)
-    );
-
-    const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (data.errors) throw new Error(data.errors[0].message);
-
-    let rawResults = data?.data?.Page?.media || [];
-    
-    if (rawResults.length === 0) throw new Error("No results found");
-
-    state.results = shuffleArray(rawResults);
+  // If list is small, add some randoms from other categories to fill up?
+  // Currently DB has enough per category (4-8 items). 
+  
+  state.results = finalResults;
+  
+  // Simulate processing time for UX
+  setTimeout(() => {
     state.phase = "results";
-
-  } catch (e) {
-    console.error("API Error:", e);
-    // FALLBACK: Use Backup Data
-    state.error = "네트워크 상태가 불안정하여 인기작을 보여드립니다.";
-    state.results = shuffleArray([...BACKUP_ANIME]);
-    state.phase = "results";
-  }
-  render();
+    render();
+  }, 1500);
 }
 
 // Start
