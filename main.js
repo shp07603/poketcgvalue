@@ -50,6 +50,19 @@ const QUESTIONS = [
   },
 ];
 
+// Fallback Data (API Error/Empty Safety)
+const BACKUP_ANIME = [
+  { id: 1, title: { romaji: "Cowboy Bebop", english: "Cowboy Bebop", native: "カウボーイビバップ" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-CXtrrkMpJ8Zq.png" }, averageScore: 86, genres: ["Action", "Sci-Fi"], description: "2071년, 우주 현상금 사냥꾼들의 스타일리시한 액션 활극." },
+  { id: 21, title: { romaji: "One Piece", english: "One Piece", native: "ONE PIECE" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/nx21-tXMN3Y20PIL9.jpg" }, averageScore: 88, genres: ["Action", "Adventure"], description: "해적왕을 꿈꾸는 루피와 동료들의 위대한 모험." },
+  { id: 16498, title: { romaji: "Shingeki no Kyojin", english: "Attack on Titan", native: "進撃の巨人" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-m5ZMNtFioc7j.jpg" }, averageScore: 85, genres: ["Action", "Drama"], description: "식인 거인에 맞선 인류의 처절한 생존 투쟁." },
+  { id: 9253, title: { romaji: "Steins;Gate", english: "Steins;Gate", native: "シュタインズ・ゲート" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx9253-7pdcVzQskqx5.jpg" }, averageScore: 90, genres: ["Sci-Fi", "Thriller"], description: "과거로 문자를 보내는 타임머신과 나비효과." },
+  { id: 21519, title: { romaji: "Kimi no Na wa.", english: "Your Name.", native: "君の名は。" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21519-IVCd8XTSX28d.jpg" }, averageScore: 89, genres: ["Romance", "Supernatural"], description: "꿈속에서 몸이 뒤바뀐 도시 소년과 시골 소녀의 기적 같은 이야기." },
+  { id: 19, title: { romaji: "Monster", english: "Monster", native: "MONSTER" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx19-M52X862Xq5x8.png" }, averageScore: 88, genres: ["Drama", "Thriller"], description: "천재 외과 의사가 살려낸 소년이 연쇄살인마가 되어 돌아왔다." },
+  { id: 11061, title: { romaji: "Hunter x Hunter (2011)", english: "Hunter x Hunter (2011)", native: "HUNTER×HUNTER (2011)" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx11061-sIpBprNrMz0R.png" }, averageScore: 89, genres: ["Action", "Adventure"], description: "아버지를 찾기 위해 헌터가 된 곤의 모험." },
+  { id: 20954, title: { romaji: "Koe no Katachi", english: "A Silent Voice", native: "聲の形" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx20954-UMb6KI78iYWH.jpg" }, averageScore: 88, genres: ["Drama", "Romance"], description: "청각 장애 소녀와 그녀를 괴롭혔던 소년의 화해와 성장." },
+  { id: 14719, title: { romaji: "JoJo no Kimyou na Bouken (TV)", english: "JoJo's Bizarre Adventure", native: "ジョジョの奇妙な冒険" }, coverImage: { large: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx14719-XFp497ZC8a6j.png" }, averageScore: 80, genres: ["Action", "Adventure"], description: "죠스타 가문과 디오 브란도의 세대를 넘은 기묘한 싸움." }
+];
+
 // ── STATE ──
 const state = {
   phase: "intro", // intro | quiz | loading | results
@@ -67,17 +80,15 @@ const app = document.getElementById("app");
 // ── LOGIC ──
 
 function generateAnalysis(ans) {
-  const moods = { Action: "강렬한 에너지", Comedy: "즐거운 웃음", Drama: "깊은 몰입감", Romance: "설레는 감정" };
-  const worlds = { Fantasy: "환상적인 세계", "Sci-Fi": "미래지향적 풍경", "Slice of Life": "소소한 일상", Supernatural: "신비로운 분위기" };
-  return `${worlds[ans.world] || "매력적인 세계"}에서 펼쳐지는 ${moods[ans.mood] || "특별한"} 이야기를 선호하시는군요. 당신의 취향 DNA에 새겨진 최고의 작품들을 선별했습니다.`;
+  const moods = { Action: "짜릿한 액션", Comedy: "유쾌한 웃음", Drama: "깊은 여운", Romance: "설레는 로맨스" };
+  const worlds = { Fantasy: "환상의 세계", "Sci-Fi": "미래 기술", "Slice of Life": "소소한 일상", Supernatural: "신비로운 분위기" };
+  return `${worlds[ans.world] || "매력적인 세계"}에서 펼쳐지는 ${moods[ans.mood] || "특별한"} 이야기를 선호하시는군요.`;
 }
 
 function getKoreanTitle(media) {
   const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
-  // 1. Check synonyms for Korean
   const krSynonym = media.synonyms?.find(s => koreanRegex.test(s));
   if (krSynonym) return krSynonym;
-  // 2. Check native title (sometimes it's Korean on AniList for Korean works)
   if (media.title.native && koreanRegex.test(media.title.native)) return media.title.native;
   return null;
 }
@@ -172,8 +183,8 @@ function renderLoading() {
     <div class="loading-container fade-up">
       <div class="spinner"></div>
       <div style="text-align:center">
-        <p style="font-size:20px;font-weight:700;margin-bottom:8px">당신의 DNA를 분석 중입니다...</p>
-        <p style="color:#7777aa;font-size:14px">방대한 데이터베이스에서 매칭점을 찾는 중</p>
+        <p style="font-size:20px;font-weight:700;margin-bottom:8px">DNA 분석 중...</p>
+        <p style="color:#7777aa;font-size:14px">AniList DB 연결 및 매칭 중</p>
       </div>
     </div>
   `;
@@ -196,8 +207,8 @@ function renderResults() {
       </div>
 
       ${state.error ? `
-        <div style="text-align:center;padding:40px;color:#ff8888;background:rgba(255,80,80,0.05);border:1px solid rgba(255,80,80,0.2);border-radius:16px;margin-bottom:32px">
-          ${state.error}
+        <div style="text-align:center;padding:20px;color:#ffaa88;margin-bottom:30px;background:rgba(255,100,100,0.1);border-radius:10px;">
+          ⚠️ ${state.error} 대신 인기 명작 리스트를 보여드립니다.
         </div>
       ` : ''}
 
@@ -211,7 +222,7 @@ function renderResults() {
           <div class="anime-card fade-up" style="animation-delay:${i * 0.1}s" 
                onclick="window.open('https://anilist.co/anime/${anime.id}', '_blank')">
             <div class="cover-wrap">
-              <img class="cover-img" src="${anime.bannerImage || anime.coverImage.large}" alt="cover">
+              <img class="cover-img" src="${anime.bannerImage || anime.coverImage?.large}" alt="cover">
               <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,26,0.95) 0%,transparent 50%)"></div>
               
               ${anime.averageScore ? `
@@ -221,7 +232,7 @@ function renderResults() {
 
             <div class="card-body">
               <div class="title-row">
-                <img class="thumb-img" src="${anime.coverImage.large}" alt="">
+                <img class="thumb-img" src="${anime.coverImage?.large}" alt="">
                 <div style="flex:1;min-width:0">
                   <h3 class="anime-title">${titleMain}</h3>
                   <p style="font-size:12px;color:#7777aa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titleSub}</p>
@@ -229,12 +240,12 @@ function renderResults() {
               </div>
 
               <div class="genre-row">
-                ${anime.genres.slice(0, 3).map(g => `<span class="genre-chip">${g}</span>`).join('')}
+                ${anime.genres?.slice(0, 3).map(g => `<span class="genre-chip">${g}</span>`).join('')}
               </div>
 
               <p class="anime-desc">${truncate(anime.description?.replace(/<[^>]*>/g, "") || "설명이 없습니다.", 100)}</p>
 
-              <div class="cta-box">상세 정보 및 리뷰 보기 →</div>
+              <div class="cta-box">상세 정보 보기 →</div>
             </div>
           </div>
         `}).join('')}
@@ -302,13 +313,22 @@ async function fetchAniListResults() {
 
   state.analysisText = generateAnalysis(state.answers);
 
-  const genres = [state.answers.mood, state.answers.world, state.answers.theme].filter(Boolean);
-  const randomPage = Math.floor(Math.random() * 5) + 1;
+  // CRITICAL FIX: Use ONLY the primary 'mood' genre for search to ensure results.
+  // Using multiple genres (AND condition) often returns 0 results.
+  // We prioritize Mood, then randomize pages for variety.
+  const targetGenre = state.answers.mood; 
+  const randomPage = Math.floor(Math.random() * 3) + 1;
 
   const query = `
-    query ($genres: [String], $page: Int) {
-      Page(page: $page, perPage: 18) {
-        media(type: ANIME, genre_in: $genres, sort: [SCORE_DESC, POPULARITY_DESC], isAdult: false) {
+    query ($genre: String, $page: Int) {
+      Page(page: $page, perPage: 20) {
+        media(
+          type: ANIME, 
+          genre: $genre, 
+          sort: [SCORE_DESC, POPULARITY_DESC], 
+          isAdult: false,
+          averageScore_greater: 65
+        ) {
           id
           title { romaji english native }
           synonyms
@@ -323,20 +343,35 @@ async function fetchAniListResults() {
   `;
 
   try {
-    const response = await fetch("https://graphql.anilist.co", {
+    // Timeout Promise to prevent infinite loading
+    const fetchPromise = fetch("https://graphql.anilist.co", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ query, variables: { genres, page: randomPage } }),
+      body: JSON.stringify({ query, variables: { genre: targetGenre, page: randomPage } }),
     });
 
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout")), 6000)
+    );
+
+    const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     if (data.errors) throw new Error(data.errors[0].message);
 
-    state.results = shuffleArray(data.data.Page.media || []);
+    let rawResults = data?.data?.Page?.media || [];
+    
+    if (rawResults.length === 0) throw new Error("No results found");
+
+    state.results = shuffleArray(rawResults);
     state.phase = "results";
+
   } catch (e) {
-    console.error(e);
-    state.error = "데이터를 가져오는데 실패했습니다. 네트워크를 확인해주세요.";
+    console.error("API Error:", e);
+    // FALLBACK: Use Backup Data
+    state.error = "네트워크 상태가 불안정하여 인기작을 보여드립니다.";
+    state.results = shuffleArray([...BACKUP_ANIME]);
     state.phase = "results";
   }
   render();
