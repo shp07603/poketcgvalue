@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Allow external connections for API and Images -->
-<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *;">
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * https://api.pokemontcg.io 'unsafe-inline'; img-src * data: blob: https://images.pokemontcg.io 'unsafe-inline'; frame-src *;">
 <title>포켓몬 카드 시세 퀴즈</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital @0;1&family=DM+Mono:wght @400;500&family=Noto+Sans+KR:wght @300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -623,7 +623,8 @@ const POPULAR_SETS = ['swsh12pt5', 'swsh9', 'swsh8', 'sm12', 'xy12', 'base1', 's
 async function fetchCards() {
   const setId = POPULAR_SETS[Math.floor(Math.random() * POPULAR_SETS.length)];
   const page = Math.floor(Math.random() * 4) + 1;
-  const url = `${BASE}/cards?q=set.id:${setId}&pageSize=60&page=${page}`;
+  // Use 'select' to fetch only necessary fields, including images
+  const url = `${BASE}/cards?q=set.id:${setId}&pageSize=60&page=${page}&select=id,name,images,tcgplayer,rarity,set,number`;
   
   console.log('Fetching:', url); // Debug
 
@@ -750,16 +751,27 @@ async function loadRound() {
 
     // Show card
     const img = document.getElementById('cardImg');
+    const imgSrc = currentCard.images?.large || currentCard.images?.small;
+
+    if (!imgSrc) {
+      throw new Error('이미지 정보 없음');
+    }
+
     img.onload = () => {
+      console.log('Image Loaded:', imgSrc);
       document.getElementById('cardSkeleton').style.display = 'none';
       img.style.display = 'block';
       document.getElementById('cardHolo').style.display = 'block';
     };
-    img.onerror = () => {
+    img.onerror = (e) => {
+      console.error('Image Load Error:', e);
       document.getElementById('cardSkeleton').style.display = 'none';
-      img.style.display = 'block';
+      document.getElementById('cardName').textContent = '이미지 로드 실패 😢';
+      img.style.display = 'none';
     };
-    img.src = currentCard.images?.large || currentCard.images?.small || '';
+    
+    // Assign src AFTER setting listeners
+    img.src = imgSrc;
 
     document.getElementById('cardName').textContent = currentCard.name;
     document.getElementById('cardDetail').innerHTML = [
