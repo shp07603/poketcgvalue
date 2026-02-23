@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Allow external connections for API and Images -->
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *;">
 <title>포켓몬 카드 시세 퀴즈</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital @0;1&family=DM+Mono:wght @400;500&family=Noto+Sans+KR:wght @300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -615,16 +617,39 @@ function goStart() {
   document.getElementById('roundDisplay').style.display = 'none';
 }
 
-// ── Fetch interesting cards (with real prices)
-const POPULAR_SETS = ['sv3pt5','sv8','sv7','sv6','sv4','swsh12pt5','swsh9','sm12','xy12','base1','swsh4','sv1'];
+// ── Fetch interesting cards (Stable sets only)
+const POPULAR_SETS = ['swsh12pt5', 'swsh9', 'swsh8', 'sm12', 'xy12', 'base1', 'swsh4', 'sv1', 'sv2', 'sv3'];
 
 async function fetchCards() {
   const setId = POPULAR_SETS[Math.floor(Math.random() * POPULAR_SETS.length)];
   const page = Math.floor(Math.random() * 4) + 1;
-  const r = await fetch(`${BASE}/cards?q=set.id:${setId}&pageSize=60&page=${page}`, { headers: H });
-  if (!r.ok) throw new Error('API 오류');
-  const data = await r.json();
-  return data.data || [];
+  const url = `${BASE}/cards?q=set.id:${setId}&pageSize=60&page=${page}`;
+  
+  console.log('Fetching:', url); // Debug
+
+  try {
+    const r = await fetch(url, { 
+      headers: H,
+      method: 'GET',
+      mode: 'cors', // Explicitly enable CORS
+      cache: 'no-store'
+    });
+    
+    if (!r.ok) {
+      const errText = await r.text().catch(() => 'No details');
+      throw new Error(`API 응답 오류 (${r.status}): ${errText}`);
+    }
+    
+    const data = await r.json();
+    return data.data || [];
+  } catch (e) {
+    console.error('Fetch Failed:', e);
+    // If it's a network error (Failed to fetch), clarify it
+    if (e.message.includes('Failed to fetch')) {
+      throw new Error('네트워크 연결 실패 (CORS 또는 차단됨). 브라우저 콘솔을 확인해주세요.');
+    }
+    throw e;
+  }
 }
 
 function getCardPrice(card) {
